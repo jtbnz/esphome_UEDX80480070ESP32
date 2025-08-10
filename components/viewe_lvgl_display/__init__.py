@@ -114,6 +114,9 @@ async def to_code(config):
         cg.add(var.set_touch_reset_pin(touch_config[CONF_RESET_PIN]))
         cg.add(var.set_touch_interrupt_pin(touch_config[CONF_INTERRUPT_PIN]))
         cg.add(var.set_touch_frequency(touch_config[CONF_I2C_FREQUENCY]))
+        cg.add(var.set_touch_enabled(True))
+    else:
+        cg.add(var.set_touch_enabled(False))
     
     # Add necessary libraries
     cg.add_library("lvgl/lvgl", "8.4.0")

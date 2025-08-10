@@ -267,50 +267,175 @@ bool VieweLVGLDisplay::init_lvgl_() {
 }
 
 void VieweLVGLDisplay::create_demo_widgets_() {
-  ESP_LOGI(TAG, "Creating demo widgets");
+  ESP_LOGI(TAG, "Creating comprehensive test card");
   
-  // Create a simple test screen
+  // Create main screen with gradient background
   lv_obj_t *scr = lv_scr_act();
-  lv_obj_set_style_bg_color(scr, lv_color_hex(0x000000), LV_PART_MAIN);
+  lv_obj_set_style_bg_color(scr, lv_color_hex(0x1a1a2e), LV_PART_MAIN);
+  lv_obj_set_style_bg_grad_color(scr, lv_color_hex(0x16213e), LV_PART_MAIN);
+  lv_obj_set_style_bg_grad_dir(scr, LV_GRAD_DIR_VER, LV_PART_MAIN);
   
-  // Create a title label
-  lv_obj_t *title = lv_label_create(scr);
-  lv_label_set_text(title, "VIEWE 7\" Display Test");
+  // Create header container
+  lv_obj_t *header = lv_obj_create(scr);
+  lv_obj_set_size(header, 780, 80);
+  lv_obj_align(header, LV_ALIGN_TOP_MID, 0, 10);
+  lv_obj_set_style_bg_color(header, lv_color_hex(0x0f3460), LV_PART_MAIN);
+  lv_obj_set_style_border_width(header, 0, LV_PART_MAIN);
+  lv_obj_set_style_radius(header, 10, LV_PART_MAIN);
+  lv_obj_clear_flag(header, LV_OBJ_FLAG_SCROLLABLE);
+  
+  // Title in header
+  lv_obj_t *title = lv_label_create(header);
+  lv_label_set_text(title, "VIEWE 7\" Display - ESPHome LVGL Test Card");
   lv_obj_set_style_text_color(title, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
-  lv_obj_set_style_text_font(title, &lv_font_montserrat_24, LV_PART_MAIN);
+  lv_obj_set_style_text_font(title, &lv_font_montserrat_22, LV_PART_MAIN);
   lv_obj_center(title);
-  lv_obj_align(title, LV_ALIGN_TOP_MID, 0, 50);
   
-  // Create some colored rectangles
-  lv_obj_t *rect1 = lv_obj_create(scr);
-  lv_obj_set_size(rect1, 100, 100);
-  lv_obj_set_style_bg_color(rect1, lv_color_hex(0xFF0000), LV_PART_MAIN);
-  lv_obj_align(rect1, LV_ALIGN_CENTER, -150, 0);
+  // Create color test section
+  lv_obj_t *color_cont = lv_obj_create(scr);
+  lv_obj_set_size(color_cont, 380, 120);
+  lv_obj_align(color_cont, LV_ALIGN_TOP_LEFT, 10, 100);
+  lv_obj_set_style_bg_color(color_cont, lv_color_hex(0x2c2c54), LV_PART_MAIN);
+  lv_obj_set_style_border_width(color_cont, 2, LV_PART_MAIN);
+  lv_obj_set_style_border_color(color_cont, lv_color_hex(0x40407a), LV_PART_MAIN);
+  lv_obj_set_style_radius(color_cont, 8, LV_PART_MAIN);
+  lv_obj_clear_flag(color_cont, LV_OBJ_FLAG_SCROLLABLE);
   
-  lv_obj_t *rect2 = lv_obj_create(scr);
-  lv_obj_set_size(rect2, 100, 100);
-  lv_obj_set_style_bg_color(rect2, lv_color_hex(0x00FF00), LV_PART_MAIN);
-  lv_obj_align(rect2, LV_ALIGN_CENTER, 0, 0);
+  // Color test label
+  lv_obj_t *color_label = lv_label_create(color_cont);
+  lv_label_set_text(color_label, "RGB Color Test");
+  lv_obj_set_style_text_color(color_label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+  lv_obj_align(color_label, LV_ALIGN_TOP_MID, 0, 5);
   
-  lv_obj_t *rect3 = lv_obj_create(scr);
-  lv_obj_set_size(rect3, 100, 100);
-  lv_obj_set_style_bg_color(rect3, lv_color_hex(0x0000FF), LV_PART_MAIN);
-  lv_obj_align(rect3, LV_ALIGN_CENTER, 150, 0);
+  // RGB color bars
+  const uint32_t colors[] = {0xFF0000, 0x00FF00, 0x0000FF, 0xFFFF00, 0xFF00FF, 0x00FFFF, 0xFFFFFF};
+  const char* color_names[] = {"R", "G", "B", "Y", "M", "C", "W"};
+  for(int i = 0; i < 7; i++) {
+    lv_obj_t *bar = lv_obj_create(color_cont);
+    lv_obj_set_size(bar, 45, 60);
+    lv_obj_align(bar, LV_ALIGN_BOTTOM_LEFT, 10 + i * 52, -10);
+    lv_obj_set_style_bg_color(bar, lv_color_hex(colors[i]), LV_PART_MAIN);
+    lv_obj_set_style_border_width(bar, 1, LV_PART_MAIN);
+    lv_obj_set_style_border_color(bar, lv_color_hex(0x808080), LV_PART_MAIN);
+    lv_obj_clear_flag(bar, LV_OBJ_FLAG_SCROLLABLE);
+    
+    lv_obj_t *bar_label = lv_label_create(bar);
+    lv_label_set_text(bar_label, color_names[i]);
+    lv_obj_set_style_text_color(bar_label, lv_color_hex(i == 2 || i == 0 ? 0xFFFFFF : 0x000000), LV_PART_MAIN);
+    lv_obj_center(bar_label);
+  }
   
-  // Create a button
-  lv_obj_t *btn = lv_btn_create(scr);
-  lv_obj_set_size(btn, 120, 50);
-  lv_obj_align(btn, LV_ALIGN_BOTTOM_MID, 0, -50);
+  // Create gradient test section
+  lv_obj_t *grad_cont = lv_obj_create(scr);
+  lv_obj_set_size(grad_cont, 380, 120);
+  lv_obj_align(grad_cont, LV_ALIGN_TOP_RIGHT, -10, 100);
+  lv_obj_set_style_bg_color(grad_cont, lv_color_hex(0x2c2c54), LV_PART_MAIN);
+  lv_obj_set_style_border_width(grad_cont, 2, LV_PART_MAIN);
+  lv_obj_set_style_border_color(grad_cont, lv_color_hex(0x40407a), LV_PART_MAIN);
+  lv_obj_set_style_radius(grad_cont, 8, LV_PART_MAIN);
+  lv_obj_clear_flag(grad_cont, LV_OBJ_FLAG_SCROLLABLE);
   
-  lv_obj_t *btn_label = lv_label_create(btn);
-  lv_label_set_text(btn_label, "Test Button");
-  lv_obj_center(btn_label);
+  // Gradient test label
+  lv_obj_t *grad_label = lv_label_create(grad_cont);
+  lv_label_set_text(grad_label, "Gradient Test");
+  lv_obj_set_style_text_color(grad_label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+  lv_obj_align(grad_label, LV_ALIGN_TOP_MID, 0, 5);
   
-  // Create a status label
-  lv_obj_t *status = lv_label_create(scr);
-  lv_label_set_text(status, "ESPHome LVGL Integration Active");
+  // Horizontal gradient
+  lv_obj_t *h_grad = lv_obj_create(grad_cont);
+  lv_obj_set_size(h_grad, 350, 30);
+  lv_obj_align(h_grad, LV_ALIGN_CENTER, 0, 5);
+  lv_obj_set_style_bg_color(h_grad, lv_color_hex(0xFF0000), LV_PART_MAIN);
+  lv_obj_set_style_bg_grad_color(h_grad, lv_color_hex(0x0000FF), LV_PART_MAIN);
+  lv_obj_set_style_bg_grad_dir(h_grad, LV_GRAD_DIR_HOR, LV_PART_MAIN);
+  lv_obj_set_style_border_width(h_grad, 1, LV_PART_MAIN);
+  lv_obj_clear_flag(h_grad, LV_OBJ_FLAG_SCROLLABLE);
+  
+  // Vertical gradient
+  lv_obj_t *v_grad = lv_obj_create(grad_cont);
+  lv_obj_set_size(v_grad, 350, 30);
+  lv_obj_align(v_grad, LV_ALIGN_BOTTOM_MID, 0, -5);
+  lv_obj_set_style_bg_color(v_grad, lv_color_hex(0x00FF00), LV_PART_MAIN);
+  lv_obj_set_style_bg_grad_color(v_grad, lv_color_hex(0xFF00FF), LV_PART_MAIN);
+  lv_obj_set_style_bg_grad_dir(v_grad, LV_GRAD_DIR_VER, LV_PART_MAIN);
+  lv_obj_set_style_border_width(v_grad, 1, LV_PART_MAIN);
+  lv_obj_clear_flag(v_grad, LV_OBJ_FLAG_SCROLLABLE);
+  
+  // Create touch test area
+  lv_obj_t *touch_cont = lv_obj_create(scr);
+  lv_obj_set_size(touch_cont, 380, 140);
+  lv_obj_align(touch_cont, LV_ALIGN_LEFT, 10, 60);
+  lv_obj_set_style_bg_color(touch_cont, lv_color_hex(0x2c2c54), LV_PART_MAIN);
+  lv_obj_set_style_border_width(touch_cont, 2, LV_PART_MAIN);
+  lv_obj_set_style_border_color(touch_cont, lv_color_hex(0x40407a), LV_PART_MAIN);
+  lv_obj_set_style_radius(touch_cont, 8, LV_PART_MAIN);
+  lv_obj_clear_flag(touch_cont, LV_OBJ_FLAG_SCROLLABLE);
+  
+  // Touch test label
+  lv_obj_t *touch_label = lv_label_create(touch_cont);
+  lv_label_set_text(touch_label, "Touch Test Buttons");
+  lv_obj_set_style_text_color(touch_label, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+  lv_obj_align(touch_label, LV_ALIGN_TOP_MID, 0, 5);
+  
+  // Create test buttons
+  for(int row = 0; row < 2; row++) {
+    for(int col = 0; col < 4; col++) {
+      lv_obj_t *btn = lv_btn_create(touch_cont);
+      lv_obj_set_size(btn, 80, 40);
+      lv_obj_align(btn, LV_ALIGN_TOP_LEFT, 15 + col * 90, 35 + row * 50);
+      
+      char btn_text[10];
+      snprintf(btn_text, sizeof(btn_text), "BTN %d", row * 4 + col + 1);
+      lv_obj_t *btn_label = lv_label_create(btn);
+      lv_label_set_text(btn_label, btn_text);
+      lv_obj_center(btn_label);
+    }
+  }
+  
+  // Create info panel
+  lv_obj_t *info_cont = lv_obj_create(scr);
+  lv_obj_set_size(info_cont, 380, 140);
+  lv_obj_align(info_cont, LV_ALIGN_RIGHT, -10, 60);
+  lv_obj_set_style_bg_color(info_cont, lv_color_hex(0x2c2c54), LV_PART_MAIN);
+  lv_obj_set_style_border_width(info_cont, 2, LV_PART_MAIN);
+  lv_obj_set_style_border_color(info_cont, lv_color_hex(0x40407a), LV_PART_MAIN);
+  lv_obj_set_style_radius(info_cont, 8, LV_PART_MAIN);
+  lv_obj_clear_flag(info_cont, LV_OBJ_FLAG_SCROLLABLE);
+  
+  // Info title
+  lv_obj_t *info_title = lv_label_create(info_cont);
+  lv_label_set_text(info_title, "Display Information");
+  lv_obj_set_style_text_color(info_title, lv_color_hex(0xFFFFFF), LV_PART_MAIN);
+  lv_obj_align(info_title, LV_ALIGN_TOP_MID, 0, 5);
+  
+  // Display specs
+  lv_obj_t *specs = lv_label_create(info_cont);
+  lv_label_set_text(specs, 
+    "Resolution: 800x480\n"
+    "Color Depth: 16-bit RGB565\n"
+    "Interface: Parallel RGB\n"
+    "Touch: GT911 Capacitive\n"
+    "LVGL Version: 8.4.0");
+  lv_obj_set_style_text_color(specs, lv_color_hex(0xB0B0B0), LV_PART_MAIN);
+  lv_obj_set_style_text_font(specs, &lv_font_montserrat_14, LV_PART_MAIN);
+  lv_obj_align(specs, LV_ALIGN_TOP_LEFT, 10, 30);
+  
+  // Create status bar at bottom
+  lv_obj_t *status_bar = lv_obj_create(scr);
+  lv_obj_set_size(status_bar, 780, 40);
+  lv_obj_align(status_bar, LV_ALIGN_BOTTOM_MID, 0, -10);
+  lv_obj_set_style_bg_color(status_bar, lv_color_hex(0x0f3460), LV_PART_MAIN);
+  lv_obj_set_style_border_width(status_bar, 0, LV_PART_MAIN);
+  lv_obj_set_style_radius(status_bar, 10, LV_PART_MAIN);
+  lv_obj_clear_flag(status_bar, LV_OBJ_FLAG_SCROLLABLE);
+  
+  // Status text
+  lv_obj_t *status = lv_label_create(status_bar);
+  lv_label_set_text(status, "✓ Display Active | ESPHome Ready | Touch Enabled");
   lv_obj_set_style_text_color(status, lv_color_hex(0x00FF00), LV_PART_MAIN);
-  lv_obj_align(status, LV_ALIGN_BOTTOM_MID, 0, -10);
+  lv_obj_center(status);
+  
+  ESP_LOGI(TAG, "Test card created successfully");
 }
 
 void VieweLVGLDisplay::flush_cb_(lv_disp_drv_t *drv, const lv_area_t *area, lv_color_t *color_p) {

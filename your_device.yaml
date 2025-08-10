@@ -4,17 +4,14 @@ esphome:
   includes:
     - include/
   platformio_options:
-    board_build.flash_mode: dio
-    board_build.partitions: huge_app.csv
     build_flags:
       - "-DBOARD_HAS_PSRAM"
       - "-DLV_CONF_INCLUDE_SIMPLE"
-      - "-DLV_COLOR_DEPTH=16"
-      - "-DLV_COLOR_16_SWAP=0"
 
 esp32:
   board: esp32-s3-devkitc-1
   variant: esp32s3
+  flash_size: 8MB
   framework:
     type: esp-idf
     version: recommended
@@ -28,7 +25,7 @@ esp32:
 logger:
   level: INFO
   logs:
-    viewe_lvgl_display: DEBUG
+    viewe_display: DEBUG
 
 api:
   encryption:
@@ -50,43 +47,23 @@ captive_portal:
 web_server:
   port: 80
 
+# Use the external custom component
 external_components:
   - source:
       type: local
       path: components
-    components: [viewe_lvgl_display]
+    components: [viewe_display]
 
-# Main display configuration with touch
-viewe_lvgl_display:
-  id: main_display
-  width: 800
-  height: 480
-  
-  # RGB display pins
-  rgb_pins:
-    red: [45, 48, 47, 21, 14]      # R0-R4
-    green: [5, 6, 7, 15, 16, 4]    # G0-G5
-    blue: [8, 3, 46, 9, 1]         # B0-B4
-  
-  # Display control pins
-  control_pins:
-    de_pin: 40
-    vsync_pin: 41
-    hsync_pin: 39
-    pclk_pin: 42
-  
-  # Backlight
-  backlight_pin: 2
-  
-  # Touch controller (GT911)
-  touch:
-    sda: 19
-    scl: 20
-    reset_pin: 38
-    interrupt_pin: 18
-    i2c_frequency: 400kHz
+# VIEWE Display with RGB LCD and GT911 touch
+display:
+  - platform: viewe_display
+    id: main_display
+    lambda: |-
+      // Custom drawing can be added here if needed
+      // This will be called for each frame
+      // Use LVGL functions to create your UI instead
 
-# Sensors
+# Basic sensors for monitoring
 sensor:
   - platform: wifi_signal
     name: "WiFi Signal"
@@ -100,30 +77,10 @@ sensor:
     name: "ESP Temperature"
     update_interval: 60s
 
-# Touch interrupt monitoring
 binary_sensor:
-  - platform: gpio
-    pin:
-      number: 18
-      mode:
-        input: true
-        pullup: true
-      inverted: true
-    name: "Touch Active"
-    filters:
-      - delayed_off: 100ms
-
   - platform: status
     name: "Device Status"
 
-# Display backlight control
-switch:
-  - platform: gpio
-    pin: 2
-    name: "Display Backlight"
-    restore_mode: RESTORE_DEFAULT_ON
-
-# Control buttons
 button:
   - platform: restart
     name: "Restart Device"
@@ -131,7 +88,6 @@ button:
   - platform: safe_mode
     name: "Safe Mode"
 
-# Time sync
 time:
   - platform: homeassistant
     id: homeassistant_time

@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Overview
 
-This is an ESPHome custom component project for integrating the VIEWE 7-inch ESP32-S3 touch display. It implements RGB display drivers with LVGL (Light and Versatile Graphics Library) support and GT911 capacitive touch controller integration.
+This is an ESPHome custom component project for the VIEWE 7-inch ESP32-S3 touch display. It provides full RGB565 color support (solving the 16-color limitation) using ESP-IDF's RGB LCD peripheral and integrates LVGL with GT911 capacitive touch.
 
 ## Key Commands
 
@@ -30,42 +30,39 @@ esphome config your_device.yaml
 
 # Clean build files
 esphome clean your_device.yaml
-
-# Generate C++ code without compiling (useful for debugging)
-esphome compile your_device.yaml --only-generate
 ```
 
 ## Architecture
 
 ### Component Structure
-The project implements a custom ESPHome component (`viewe_lvgl_display`) that bridges:
-- **ESP32-S3 RGB LCD peripheral** → 16-bit parallel RGB interface for the 800x480 display
-- **LVGL graphics library** → Provides UI rendering and widget management
-- **GT911 touch controller** → I2C-based capacitive touch input via custom driver
-- **ESPHome framework** → Integration with Home Assistant and ESPHome ecosystem
+The custom `viewe_display` component implements:
+- **ESP32-S3 RGB LCD Driver** → Direct parallel RGB interface using `esp_lcd_new_rgb_panel()`
+- **LVGL Integration** → Full graphics library with widget support and touch input
+- **GT911 Touch Controller** → I2C capacitive touch with coordinate mapping
+- **ESPHome Display Platform** → Standard ESPHome display integration
 
-### Key Technical Details
-- **Display Interface**: Parallel RGB565 (not SPI) - requires ESP-IDF framework for proper RGB LCD support
-- **Memory Architecture**: Uses PSRAM for dual framebuffers (~400KB total)
-- **Touch Pipeline**: GT911 → I2C → LVGL input device → Widget event handling
-- **Pin Mapping**: Complex RGB pin configuration (5 red, 6 green, 5 blue pins) plus control signals
+### Key Technical Implementation
+- **RGB Interface**: 16 parallel data pins (RGB565) + 4 control signals (HSYNC, VSYNC, DE, PCLK)
+- **PSRAM Utilization**: Double-buffered framebuffers in external PSRAM
+- **Touch I2C**: Direct GT911 register access for touch coordinate reading
+- **LVGL Threading**: FreeRTOS task integration with mutex protection
 
 ### Component Files
-- `components/viewe_lvgl_display/__init__.py`: ESPHome component configuration and code generation
-- `components/viewe_lvgl_display/viewe_lvgl_display.cpp`: Main implementation with RGB driver and LVGL integration
-- `components/viewe_lvgl_display/viewe_lvgl_display.h`: Component header with class definition
-- `include/lv_conf.h`: LVGL configuration (buffer sizes, color depth, features)
-- `your_device.yaml`: ESPHome device configuration with pin mappings and component setup
+- `components/viewe_display/__init__.py`: ESPHome platform definition and code generation
+- `components/viewe_display/viewe_display.h`: Class definition with ESP-IDF RGB panel interface
+- `components/viewe_display/viewe_display.cpp`: Complete RGB LCD + LVGL + Touch implementation
+- `include/lv_conf.h`: LVGL 8.4.0 configuration optimized for ESP32-S3
+- `your_device.yaml`: Clean ESPHome configuration using the custom display platform
 
-### Critical Configuration Requirements
-- Must use ESP-IDF framework (not Arduino) for RGB LCD support
-- Requires PSRAM enabled for framebuffers
-- Needs large app partition (16MB flash recommended)
-- Color depth fixed at 16-bit RGB565
+### Critical Requirements
+- **ESP-IDF Framework**: Required for `esp_lcd_rgb_panel` support (Arduino framework cannot drive RGB displays)
+- **PSRAM Enabled**: Essential for framebuffer allocation in external memory
+- **Proper Pin Mapping**: Must match VIEWE hardware exactly (see component for pin definitions)
+- **I2C Bus**: GT911 touch controller requires dedicated I2C initialization
 
-### Touch Configuration Options
-Two approaches for touch support:
-1. **Integrated touch** (in custom component): Basic initialization only, no event handling
-2. **Standard GT911 component** (recommended): Full touch events, zones, multi-touch support
-   - See `your_device_with_standard_touch.yaml` for standard component example
-   - Provides `on_touch`, `on_release` callbacks and binary sensor zones
+### Display Specifications
+- Resolution: 800x480 pixels
+- Color Depth: 16-bit RGB565 (65,536 colors)
+- Interface: Parallel RGB (not SPI)
+- Touch: GT911 capacitive with interrupt support
+- Backlight: GPIO2 controlled

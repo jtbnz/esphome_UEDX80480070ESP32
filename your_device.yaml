@@ -1,0 +1,256 @@
+esphome:
+  name: viewe-display-7inch
+  friendly_name: "VIEWE 7-inch Touch Display"
+  # Add include directory for lv_conf.h
+  includes:
+    - include/
+  # Platform.io options for proper ESP32-S3 configuration
+  platformio_options:
+    board_build.flash_mode: dio
+    board_build.partitions: huge_app.csv
+    build_flags:
+      - "-DBOARD_HAS_PSRAM"
+      - "-DLV_CONF_INCLUDE_SIMPLE"
+      - "-DLV_COLOR_DEPTH=16"
+      - "-DLV_COLOR_16_SWAP=0"
+      - "-DCORE_DEBUG_LEVEL=3"
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  framework:
+    type: esp-idf
+    version: recommended
+    sdkconfig_options:
+      # Enable PSRAM
+      CONFIG_ESP32S3_SPIRAM_SUPPORT: y
+      CONFIG_SPIRAM_MODE_OCT: y
+      CONFIG_SPIRAM_SPEED_80M: y
+      # Increase main task stack size for LVGL
+      CONFIG_ESP_MAIN_TASK_STACK_SIZE: 8192
+      # Enable RGB LCD peripheral
+      CONFIG_LCD_ENABLE_DEBUG_LOG: y
+    advanced:
+      ignore_efuse_mac_crc: false
+
+# Enable logging with appropriate level
+logger:
+  level: INFO
+  logs:
+    # Reduce ESP-IDF verbosity
+    esp32: WARN
+    esp32.preferences: ERROR
+    # Component specific logging
+    viewe_lvgl_display: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "your-32-char-encryption-key-here!!"
+  services:
+    # Service to update display content
+    - service: update_display_text
+      variables:
+        text: string
+      then:
+        - lambda: |-
+            // Custom service to update display - can be implemented later
+            ESP_LOGI("main", "Display text update requested: %s", text.c_str());
+
+# Enable OTA updates
+ota:
+  - platform: esphome
+    password: "your-ota-password-here"
+
+# WiFi configuration
+wifi:
+  ssid: "Your-WiFi-SSID"
+  password: "Your-WiFi-Password"
+  
+  # Enable fallback hotspot in case of no connection
+  ap:
+    ssid: "VIEWE Display Fallback"
+    password: "fallback123"
+
+# Captive portal for initial setup
+captive_portal:
+
+# Web server for diagnostics
+web_server:
+  port: 80
+
+# External components - our custom LVGL display component
+external_components:
+  - source:
+      type: local
+      path: components
+    components: [viewe_lvgl_display]
+
+# Configure the VIEWE LVGL Display
+viewe_lvgl_display:
+  id: main_display
+  width: 800
+  height: 480
+  
+  # RGB display pins (parallel interface)
+  rgb_pins:
+    red: [45, 48, 47, 21, 14]      # R0, R1, R2, R3, R4
+    green: [5, 6, 7, 15, 16, 4]    # G0, G1, G2, G3, G4, G5
+    blue: [8, 3, 46, 9, 1]         # B0, B1, B2, B3, B4
+  
+  # Display control pins
+  control_pins:
+    de_pin: 40        # Data Enable
+    vsync_pin: 41     # Vertical Sync
+    hsync_pin: 39     # Horizontal Sync
+    pclk_pin: 42      # Pixel Clock
+  
+  # Backlight control
+  backlight_pin: 2
+  
+  # Touch controller configuration (GT911)
+  touch:
+    sda_pin: 19
+    scl_pin: 20
+    reset_pin: 38
+    interrupt_pin: 18
+    i2c_frequency: 400kHz
+
+# Sensors for monitoring
+sensor:
+  # WiFi signal strength
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    id: wifi_signal_db
+    update_interval: 60s
+    entity_category: diagnostic
+
+  # Uptime sensor  
+  - platform: uptime
+    name: "Uptime"
+    id: uptime_sensor
+    update_interval: 60s
+    entity_category: diagnostic
+
+  # ESP32 internal temperature
+  - platform: internal_temperature
+    name: "ESP Temperature"
+    id: esp_temperature
+    update_interval: 60s
+    entity_category: diagnostic
+
+# Text sensors for device info
+text_sensor:
+  # ESP32 info
+  - platform: version
+    name: "ESPHome Version"
+    entity_category: diagnostic
+    
+  - platform: wifi_info
+    ip_address:
+      name: "IP Address"
+      entity_category: diagnostic
+    ssid:
+      name: "Connected SSID"
+      entity_category: diagnostic
+    mac_address:
+      name: "MAC Address"
+      entity_category: diagnostic
+
+# Binary sensors
+binary_sensor:
+  # Status LED/connection indicator
+  - platform: status
+    name: "Device Status"
+    id: device_status
+
+# Buttons for control
+button:
+  # Restart button
+  - platform: restart
+    name: "Restart Device"
+    entity_category: diagnostic
+    
+  # Safe mode button  
+  - platform: safe_mode
+    name: "Safe Mode"
+    entity_category: diagnostic
+
+# Switches for display control
+switch:
+  # Display backlight control
+  - platform: gpio
+    pin: 2
+    name: "Display Backlight"
+    id: backlight_switch
+    restore_mode: RESTORE_DEFAULT_ON
+    entity_category: config
+
+# Status LED (if available)
+light:
+  # RGB LED control (if your board has one)
+  - platform: esp32_rmt_led_strip
+    rgb_order: GRB
+    pin: 0  # Adjust pin if different
+    num_leds: 1
+    rmt_channel: 0
+    chipset: WS2812
+    name: "Status LED"
+    id: status_led
+    entity_category: diagnostic
+    effects:
+      - pulse:
+      - strobe:
+
+# Interval for periodic tasks
+interval:
+  # Periodic task to update display info
+  - interval: 30s
+    then:
+      - lambda: |-
+          // Update system info on display periodically
+          static int counter = 0;
+          counter++;
+          ESP_LOGI("main", "Periodic update #%d", counter);
+          // You can add custom display updates here
+
+# Time component for display
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    timezone: "America/New_York"  # Adjust to your timezone
+    on_time_sync:
+      then:
+        - logger.log: "Time synchronized with Home Assistant"
+
+# Optional: SD Card support (if using SD card slot)
+# spi:
+#   - id: sd_spi
+#     clk_pin: 12
+#     mosi_pin: 11
+#     miso_pin: 13
+
+# Optional: SD card component
+# esp32_sdmmc:
+#   - id: sd_card
+#     cs_pin: 10
+#     spi_id: sd_spi
+
+# Device-specific configuration
+substitutions:
+  device_name: "viewe-display-7inch"
+  friendly_name: "VIEWE 7-inch Touch Display"
+  device_description: "ESP32-S3 7-inch touch display with LVGL"
+
+# Additional configuration for debugging
+debug:
+  update_interval: 5s
+
+# Watchdog to restart if device becomes unresponsive
+watchdog:
+  timeout: 30s
+
+# Configure memory management
+esp32_ble_tracker:
+  scan_parameters:
+    active: false

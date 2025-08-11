@@ -1,12 +1,6 @@
 esphome:
   name: viewe-display-7inch
   friendly_name: "VIEWE 7-inch Touch Display"
-  includes:
-    - include/
-  platformio_options:
-    build_flags:
-      - "-DBOARD_HAS_PSRAM"
-      - "-DLV_CONF_INCLUDE_SIMPLE"
 
 esp32:
   board: esp32-s3-devkitc-1
@@ -17,7 +11,7 @@ esp32:
     version: recommended
     sdkconfig_options:
       CONFIG_ESP32S3_SPIRAM_SUPPORT: "y"
-      CONFIG_SPIRAM_MODE_OCT: "y"
+      CONFIG_SPIRAM_MODE_OCT: "y" 
       CONFIG_SPIRAM_SPEED_80M: "y"
       CONFIG_ESP_MAIN_TASK_STACK_SIZE: "8192"
       CONFIG_LCD_ENABLE_DEBUG_LOG: "y"
@@ -25,7 +19,8 @@ esp32:
 logger:
   level: INFO
   logs:
-    viewe_display: DEBUG
+    viewe_rgb: DEBUG
+    gt911: DEBUG
 
 api:
   encryption:
@@ -47,30 +42,142 @@ captive_portal:
 web_server:
   port: 80
 
-# Use the external custom component
+# I2C bus for GT911 touchscreen
+i2c:
+  sda: 19
+  scl: 20
+  scan: true
+  frequency: 400kHz
+
+# Custom RGB display component
 external_components:
   - source:
       type: local
       path: components
-    components: [viewe_display]
+    components: [viewe_rgb.display]
 
-# VIEWE Display with RGB LCD and GT911 touch
+# VIEWE RGB Display (proper ESPHome display platform)
 display:
-  - platform: viewe_display
+  - platform: viewe_rgb
     id: main_display
+    width: 800
+    height: 480
+    # RGB565 data pins (16 pins total)
+    # B0-B4, G0-G5, R0-R4
+    data_pins: [8, 3, 46, 9, 1, 5, 6, 7, 15, 16, 4, 45, 48, 47, 21, 14]
+    # Control pins
+    de_pin: 40
+    pclk_pin: 42
+    hsync_pin: 39
+    vsync_pin: 41
+    # Optional pins
+    backlight_pin: 2
+    # Timing (optimized for VIEWE 7-inch)
+    pixel_clock_frequency: 16MHz
+    hsync_pulse_width: 10
+    hsync_back_porch: 10
+    hsync_front_porch: 20
+    vsync_pulse_width: 10
+    vsync_back_porch: 10
+    vsync_front_porch: 10
+    update_interval: 16ms  # ~60fps
     lambda: |-
-      // Custom drawing can be added here if needed
-      // This will be called for each frame
-      // Use LVGL functions to create your UI instead
+      // RGB565 Test Card - Proves 16-bit color depth
+      
+      // Background gradient
+      it.filled_rectangle(0, 0, 800, 480, Color(26, 26, 46));
+      
+      // Header
+      it.filled_rectangle(10, 10, 780, 60, Color(15, 52, 96));
+      it.print(400, 25, id(font_large), Color::WHITE, TextAlign::CENTER, 
+               "VIEWE 7\" RGB565 - 65,536 Colors");
+      
+      // RGB gradient test - proves 16-bit depth
+      it.print(400, 100, id(font_medium), Color::WHITE, TextAlign::CENTER, 
+               "RGB565 Gradients (32R/64G/32B levels)");
+      
+      // Red gradient (0 to 255, shows 32 levels in RGB565)
+      for (int x = 0; x < 240; x++) {
+        uint8_t red_val = (x * 255) / 239;
+        Color red_grad(red_val, 0, 0);
+        it.vertical_line(50 + x, 140, 30, red_grad);
+      }
+      it.print(170, 175, id(font_small), Color::WHITE, TextAlign::CENTER, "RED");
+      
+      // Green gradient (0 to 255, shows 64 levels in RGB565) 
+      for (int x = 0; x < 240; x++) {
+        uint8_t green_val = (x * 255) / 239;
+        Color green_grad(0, green_val, 0);
+        it.vertical_line(280 + x, 140, 30, green_grad);
+      }
+      it.print(400, 175, id(font_small), Color::WHITE, TextAlign::CENTER, "GREEN");
+      
+      // Blue gradient (0 to 255, shows 32 levels in RGB565)
+      for (int x = 0; x < 240; x++) {
+        uint8_t blue_val = (x * 255) / 239;
+        Color blue_grad(0, 0, blue_val);
+        it.vertical_line(510 + x, 140, 30, blue_grad);
+      }
+      it.print(630, 175, id(font_small), Color::WHITE, TextAlign::CENTER, "BLUE");
+      
+      // 16-bit color palette - colors impossible with 16-color displays
+      it.print(400, 220, id(font_medium), Color::WHITE, TextAlign::CENTER,
+               "16-bit Color Palette (Impossible with 16-color displays)");
+      
+      // Array of intermediate colors proving 16-bit depth
+      Color test_colors[] = {
+        Color(255, 128, 128), Color(128, 255, 128), Color(128, 128, 255),
+        Color(255, 255, 128), Color(255, 128, 255), Color(128, 255, 255),
+        Color(255, 64, 64),   Color(64, 255, 64),   Color(64, 64, 255),
+        Color(255, 192, 64),  Color(192, 64, 255),  Color(64, 255, 192),
+        Color(255, 0, 128),   Color(128, 255, 0),   Color(0, 128, 255),
+        Color(255, 128, 0),   Color(128, 0, 255),   Color(0, 255, 128)
+      };
+      
+      for (int i = 0; i < 18; i++) {
+        int row = i / 9;
+        int col = i % 9;
+        int x = 80 + col * 70;
+        int y = 250 + row * 50;
+        it.filled_rectangle(x, y, 60, 40, test_colors[i]);
+        it.rectangle(x, y, 60, 40, Color::WHITE);
+      }
+      
+      // Status information
+      it.filled_rectangle(20, 420, 760, 40, Color(15, 52, 96));
+      it.print(400, 430, id(font_medium), Color(0, 255, 136), TextAlign::CENTER,
+               "✓ RGB565 Active | ESP-IDF RGB LCD | Ready for Touch");
 
-# Basic sensors for monitoring
+# GT911 Touchscreen (standard ESPHome component)
+touchscreen:
+  - platform: gt911
+    interrupt_pin: 18
+    reset_pin: 38
+    on_touch:
+      - lambda: |-
+          ESP_LOGI("touch", "Touch detected at (%d, %d)", touch.x, touch.y);
+
+# Fonts for display
+font:
+  - file: "gfonts://Roboto"
+    id: font_small
+    size: 16
+  - file: "gfonts://Roboto"
+    id: font_medium 
+    size: 20
+  - file: "gfonts://Roboto"
+    id: font_large
+    size: 28
+    weight: bold
+
+# Sensors for monitoring
 sensor:
   - platform: wifi_signal
     name: "WiFi Signal"
     update_interval: 60s
 
   - platform: uptime
-    name: "Uptime"
+    name: "Uptime" 
     update_interval: 60s
 
   - platform: internal_temperature

@@ -1,0 +1,1 @@
+# Empty init file for viewe_rgb component

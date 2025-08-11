@@ -58,18 +58,19 @@ void VieweDisplay::init_lcd_() {
   panel_config.de_gpio_num = (gpio_num_t)this->de_pin_;
   
   // Configure RGB data pins (16 pins total: 5+6+5)
+  // ESP-IDF expects pins in RGB565 format: RRRRR GGGGGG BBBBB
   int pin_idx = 0;
-  // Blue pins (LSB first)
+  // Red pins (MSB to LSB for RGB565)
   for (int i = 0; i < 5; i++) {
-    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->blue_pins_[i];
+    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->red_pins_[i];
   }
-  // Green pins (LSB first)
+  // Green pins (MSB to LSB for RGB565)
   for (int i = 0; i < 6; i++) {
     panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->green_pins_[i];
   }
-  // Red pins (LSB first)
+  // Blue pins (MSB to LSB for RGB565)
   for (int i = 0; i < 5; i++) {
-    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->red_pins_[i];
+    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->blue_pins_[i];
   }
   
   // Configure timing
@@ -115,44 +116,42 @@ void VieweDisplay::init_lcd_() {
 }
 
 void VieweDisplay::update() {
-  ESP_LOGD(TAG, "Update called - clearing buffer and executing lambda");
+  ESP_LOGD(TAG, "Update called");
   
   // Clear the buffer first
   this->clear();
   
   // Execute the display update callbacks and lambda
+  // This calls the lambda defined in the YAML file
   this->do_update_();
   
-  // If buffer is still all black, draw a test pattern
+  // Check if buffer is still empty and draw test pattern if needed
   uint16_t *buf = (uint16_t *)this->buffer_;
   bool all_black = true;
   for (int i = 0; i < 100; i++) {
     if (buf[i] != 0) {
       all_black = false;
+      ESP_LOGD(TAG, "Buffer has data at position %d: 0x%04X", i, buf[i]);
       break;
     }
   }
   
   if (all_black) {
-    ESP_LOGW(TAG, "Buffer is all black after lambda - drawing test pattern");
-    // Draw red, green, blue stripes as a test
-    for (int y = 0; y < this->height_; y++) {
-      for (int x = 0; x < this->width_; x++) {
-        if (x < this->width_ / 3) {
-          // Red stripe
-          buf[y * this->width_ + x] = 0xF800;
-        } else if (x < 2 * this->width_ / 3) {
-          // Green stripe  
-          buf[y * this->width_ + x] = 0x07E0;
-        } else {
-          // Blue stripe
-          buf[y * this->width_ + x] = 0x001F;
-        }
-      }
+    ESP_LOGW(TAG, "Buffer is empty after lambda - drawing test pattern");
+    static int test_color = 0;
+    uint16_t color = 0;
+    switch (test_color % 3) {
+      case 0: color = 0xF800; ESP_LOGW(TAG, "Drawing RED test"); break;    // Red
+      case 1: color = 0x07E0; ESP_LOGW(TAG, "Drawing GREEN test"); break;  // Green
+      case 2: color = 0x001F; ESP_LOGW(TAG, "Drawing BLUE test"); break;   // Blue
+    }
+    test_color++;
+    
+    // Fill entire screen with solid color
+    for (int i = 0; i < this->width_ * this->height_; i++) {
+      buf[i] = color;
     }
   }
-  
-  ESP_LOGD(TAG, "Lambda executed, displaying to panel");
   
   // Now display the updated buffer to the LCD panel  
   this->display_();

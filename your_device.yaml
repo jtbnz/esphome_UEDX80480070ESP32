@@ -71,18 +71,18 @@ display:
     vsync_pin: 41
     # Optional pins
     backlight_pin: 2
-    # ESP32-S3 RGB LCD timing parameters (based on research)
-    pixel_clock_frequency: 10MHz
+    # Adjusted timing for full screen coverage
+    pixel_clock_frequency: 14MHz  # Increased for better coverage
     pclk_inverted: false
     hsync_idle_low: false
     vsync_idle_low: false
-    de_idle_high: false
-    hsync_pulse_width: 8
-    hsync_back_porch: 50
-    hsync_front_porch: 10
-    vsync_pulse_width: 8
-    vsync_back_porch: 20
-    vsync_front_porch: 10
+    de_idle_high: true  # Try with DE active high
+    hsync_pulse_width: 30
+    hsync_back_porch: 30
+    hsync_front_porch: 30
+    vsync_pulse_width: 13
+    vsync_back_porch: 13
+    vsync_front_porch: 13
     update_interval: 3s  # Change color every 3 seconds
     lambda: |-
       // Color cycling test to verify pin mapping

@@ -47,7 +47,8 @@ void VieweDisplay::init_lcd_() {
   esp_lcd_rgb_panel_config_t panel_config = {};
   panel_config.data_width = 16; // RGB565
   panel_config.psram_trans_align = 64;
-  panel_config.num_fbs = 1; // Single buffering for now to test
+  panel_config.num_fbs = 1; // Single buffering
+  panel_config.bounce_buffer_size_px = 0; // No bounce buffer for now
   panel_config.clk_src = LCD_CLK_SRC_DEFAULT;
   
   // Configure pins

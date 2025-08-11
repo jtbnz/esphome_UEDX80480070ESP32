@@ -71,18 +71,18 @@ display:
     vsync_pin: 41
     # Optional pins
     backlight_pin: 2
-    # Much higher timing values - closer to working RPI DPI config
-    pixel_clock_frequency: 16MHz
-    pclk_inverted: true
+    # ESP32-S3 RGB LCD timing parameters (based on research)
+    pixel_clock_frequency: 10MHz
+    pclk_inverted: false
     hsync_idle_low: false
     vsync_idle_low: false
     de_idle_high: false
-    hsync_pulse_width: 48
-    hsync_back_porch: 40
-    hsync_front_porch: 40
-    vsync_pulse_width: 1
-    vsync_back_porch: 31
-    vsync_front_porch: 13
+    hsync_pulse_width: 8
+    hsync_back_porch: 50
+    hsync_front_porch: 10
+    vsync_pulse_width: 8
+    vsync_back_porch: 20
+    vsync_front_porch: 10
     update_interval: 3s  # Change color every 3 seconds
     lambda: |-
       // Color cycling test to verify pin mapping

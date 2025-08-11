@@ -30,12 +30,9 @@ void VieweDisplay::setup() {
   }
   ESP_LOGCONFIG(TAG, "Buffer allocated at: %p", this->buffer_);
   
-  // Clear buffer to white to test if display is working
-  uint16_t white_565 = 0xFFFF; // White in RGB565
-  for (size_t i = 0; i < (this->width_ * this->height_); i++) {
-    this->buffer_[i] = white_565;
-  }
-  ESP_LOGCONFIG(TAG, "Buffer cleared to white");
+  // Initialize buffer to black (will be overwritten by lambda)
+  memset(this->buffer_, 0, buffer_size);
+  ESP_LOGCONFIG(TAG, "Buffer initialized");
   
   // Force initial display update
   this->display_();
@@ -133,6 +130,9 @@ void VieweDisplay::init_lcd_() {
 }
 
 void VieweDisplay::update() {
+  // Execute the ESPHome display lambda (this calls draw_pixel_at)
+  this->do_update_();
+  // Now display the updated buffer to the LCD panel
   this->display_();
 }
 

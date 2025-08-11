@@ -9,10 +9,9 @@
 #include <driver/gpio.h>
 
 namespace esphome {
-namespace viewe_rgb {
-namespace display {
+namespace viewe_display {
 
-class VieweRGBDisplay : public PollingComponent, public display::Display {
+class VieweDisplay : public display::Display {
  public:
   void set_width(uint16_t width) { this->width_ = width; }
   void set_height(uint16_t height) { this->height_ = height; }
@@ -43,10 +42,9 @@ class VieweRGBDisplay : public PollingComponent, public display::Display {
   
   display::DisplayType get_display_type() override { return display::DisplayType::DISPLAY_TYPE_COLOR; }
 
+  void draw_pixel_at(int x, int y, Color color) override;
+
  protected:
-  void draw_absolute_pixel_internal(int x, int y, Color color) override;
-  void fill_internal(Color color) override;
-  
   int get_height_internal() override { return this->height_; }
   int get_width_internal() override { return this->width_; }
   size_t get_buffer_length_() { return this->width_ * this->height_ * 2; } // RGB565
@@ -77,12 +75,9 @@ class VieweRGBDisplay : public PollingComponent, public display::Display {
   esp_lcd_panel_handle_t panel_handle_{nullptr};
   uint16_t *buffer_{nullptr};
   bool need_update_{false};
-  
-  static const char *const TAG;
 };
 
-}  // namespace display  
-}  // namespace viewe_rgb
+}  // namespace viewe_display
 }  // namespace esphome
 
 #endif  // USE_ESP_IDF

@@ -17,22 +17,20 @@ esp32:
       CONFIG_LCD_ENABLE_DEBUG_LOG: "y"
 
 logger:
-  level: INFO
+  level: DEBUG
   logs:
-    viewe_rgb: DEBUG
+    viewe_display: DEBUG
     gt911: DEBUG
 
 api:
-  encryption:
-    key: "your-32-char-encryption-key-here!!"
 
 ota:
   - platform: esphome
-    password: "your-ota-password-here"
+    password: "testpassword"
 
 wifi:
-  ssid: "Your-WiFi-SSID"
-  password: "Your-WiFi-Password"
+  ssid: "TestNetwork"
+  password: "testpass123"
   ap:
     ssid: "VIEWE Display Fallback"
     password: "fallback123"
@@ -54,11 +52,11 @@ external_components:
   - source:
       type: local
       path: components
-    components: [viewe_rgb.display]
+    components: [viewe_display]
 
 # VIEWE RGB Display (proper ESPHome display platform)
 display:
-  - platform: viewe_rgb
+  - platform: viewe_display
     id: main_display
     width: 800
     height: 480
@@ -72,14 +70,14 @@ display:
     vsync_pin: 41
     # Optional pins
     backlight_pin: 2
-    # Timing (optimized for VIEWE 7-inch)
-    pixel_clock_frequency: 16MHz
-    hsync_pulse_width: 10
-    hsync_back_porch: 10
-    hsync_front_porch: 20
-    vsync_pulse_width: 10
-    vsync_back_porch: 10
-    vsync_front_porch: 10
+    # Timing (based on VIEWE reference code)
+    pixel_clock_frequency: 14MHz
+    hsync_pulse_width: 4
+    hsync_back_porch: 8
+    hsync_front_porch: 8
+    vsync_pulse_width: 4
+    vsync_back_porch: 8
+    vsync_front_porch: 8
     update_interval: 16ms  # ~60fps
     lambda: |-
       // RGB565 Test Card - Proves 16-bit color depth
@@ -168,7 +166,6 @@ font:
   - file: "gfonts://Roboto"
     id: font_large
     size: 28
-    weight: bold
 
 # Sensors for monitoring
 sensor:

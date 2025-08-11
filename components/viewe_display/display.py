@@ -1,22 +1,23 @@
 import esphome.codegen as cg
 import esphome.config_validation as cv
-from esphome.components import display, i2c
+from esphome.components import display
 from esphome.const import (
     CONF_ID,
     CONF_LAMBDA,
     CONF_PAGES,
     CONF_RESET_PIN,
-    CONF_WIDTH,
+    CONF_WIDTH, 
     CONF_HEIGHT,
 )
 
+from . import VieweDisplay, viewe_display_ns
+
 DEPENDENCIES = ["esp32"]
-AUTO_LOAD = ["display"]
 
 CONF_DE_PIN = "de_pin"
 CONF_HSYNC_PIN = "hsync_pin"
-CONF_VSYNC_PIN = "vsync_pin"  
-CONF_PCLK_PIN = "pclk_pin"
+CONF_VSYNC_PIN = "vsync_pin"
+CONF_PCLK_PIN = "pclk_pin" 
 CONF_DATA_PINS = "data_pins"
 CONF_PIXEL_CLOCK_FREQUENCY = "pixel_clock_frequency"
 CONF_HSYNC_PULSE_WIDTH = "hsync_pulse_width"
@@ -28,25 +29,22 @@ CONF_VSYNC_FRONT_PORCH = "vsync_front_porch"
 CONF_ENABLE_PIN = "enable_pin"
 CONF_BACKLIGHT_PIN = "backlight_pin"
 
-viewe_rgb_display_ns = cg.esphome_ns.namespace("viewe_rgb").namespace("display")  
-VieweRGBDisplay = viewe_rgb_display_ns.class_("VieweRGBDisplay", cg.PollingComponent, display.Display)
-
 CONFIG_SCHEMA = cv.All(
     display.FULL_DISPLAY_SCHEMA.extend(
         {
-            cv.GenerateID(): cv.declare_id(VieweRGBDisplay),
-            cv.Required(CONF_WIDTH): cv.int_,
-            cv.Required(CONF_HEIGHT): cv.int_,
-            cv.Required(CONF_DATA_PINS): cv.All(
+            cv.GenerateID(): cv.declare_id(VieweDisplay),
+            cv.Optional(CONF_WIDTH, default=800): cv.int_,
+            cv.Optional(CONF_HEIGHT, default=480): cv.int_,
+            cv.Optional(CONF_DATA_PINS, default=[8, 3, 46, 9, 1, 5, 6, 7, 15, 16, 4, 45, 48, 47, 21, 14]): cv.All(
                 cv.ensure_list(cv.int_range(min=0, max=48)), cv.Length(min=16, max=16)
             ),
-            cv.Required(CONF_DE_PIN): cv.int_range(min=0, max=48),
-            cv.Required(CONF_PCLK_PIN): cv.int_range(min=0, max=48),
-            cv.Required(CONF_HSYNC_PIN): cv.int_range(min=0, max=48),
-            cv.Required(CONF_VSYNC_PIN): cv.int_range(min=0, max=48),
+            cv.Optional(CONF_DE_PIN, default=40): cv.int_range(min=0, max=48),
+            cv.Optional(CONF_PCLK_PIN, default=42): cv.int_range(min=0, max=48),
+            cv.Optional(CONF_HSYNC_PIN, default=39): cv.int_range(min=0, max=48),
+            cv.Optional(CONF_VSYNC_PIN, default=41): cv.int_range(min=0, max=48),
             cv.Optional(CONF_ENABLE_PIN): cv.int_range(min=0, max=48),
             cv.Optional(CONF_RESET_PIN): cv.int_range(min=0, max=48),
-            cv.Optional(CONF_BACKLIGHT_PIN): cv.int_range(min=0, max=48),
+            cv.Optional(CONF_BACKLIGHT_PIN, default=2): cv.int_range(min=0, max=48),
             cv.Optional(CONF_PIXEL_CLOCK_FREQUENCY, default="16MHz"): cv.frequency,
             cv.Optional(CONF_HSYNC_PULSE_WIDTH, default=10): cv.int_,
             cv.Optional(CONF_HSYNC_BACK_PORCH, default=10): cv.int_,
@@ -55,13 +53,12 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_VSYNC_BACK_PORCH, default=10): cv.int_,
             cv.Optional(CONF_VSYNC_FRONT_PORCH, default=10): cv.int_,
         }
-    ).extend(cv.polling_component_schema("1s")),
+    ).extend(cv.polling_component_schema("16ms")),
     cv.only_with_esp_idf,
 )
 
 async def to_code(config):
     var = cg.new_Pvariable(config[CONF_ID])
-    await cg.register_component(var, config)
     await display.register_display(var, config)
     
     # Display dimensions

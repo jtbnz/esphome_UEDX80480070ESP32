@@ -71,18 +71,18 @@ display:
     vsync_pin: 41
     # Optional pins
     backlight_pin: 2
-    # Try ESP-IDF standard RGB LCD timing for 800x480
-    pixel_clock_frequency: 14MHz
-    pclk_inverted: false
+    # Much higher timing values - closer to working RPI DPI config
+    pixel_clock_frequency: 16MHz
+    pclk_inverted: true
     hsync_idle_low: false
     vsync_idle_low: false
     de_idle_high: false
-    hsync_pulse_width: 4
-    hsync_back_porch: 8
-    hsync_front_porch: 8
-    vsync_pulse_width: 4
-    vsync_back_porch: 8
-    vsync_front_porch: 8
+    hsync_pulse_width: 48
+    hsync_back_porch: 40
+    hsync_front_porch: 40
+    vsync_pulse_width: 1
+    vsync_back_porch: 31
+    vsync_front_porch: 13
     update_interval: 3s  # Change color every 3 seconds
     lambda: |-
       // Color cycling test to verify pin mapping

@@ -71,22 +71,58 @@ display:
     vsync_pin: 41
     # Optional pins
     backlight_pin: 2
-    # Timing matching working config with sync polarity 
-    pixel_clock_frequency: 16MHz
-    pclk_inverted: true
+    # Try ESP-IDF standard RGB LCD timing for 800x480
+    pixel_clock_frequency: 14MHz
+    pclk_inverted: false
     hsync_idle_low: false
     vsync_idle_low: false
     de_idle_high: false
-    hsync_pulse_width: 48
-    hsync_back_porch: 40
-    hsync_front_porch: 40
-    vsync_pulse_width: 1
-    vsync_back_porch: 31
-    vsync_front_porch: 13
-    update_interval: 500ms  # Slow update for testing
-    # lambda: |-
-    #   // Simple test - just fill red
-    #   it.fill(Color(255, 0, 0));
+    hsync_pulse_width: 4
+    hsync_back_porch: 8
+    hsync_front_porch: 8
+    vsync_pulse_width: 4
+    vsync_back_porch: 8
+    vsync_front_porch: 8
+    update_interval: 3s  # Change color every 3 seconds
+    lambda: |-
+      // Color cycling test to verify pin mapping
+      static int color_phase = 0;
+      
+      switch (color_phase % 8) {
+        case 0:
+          ESP_LOGI("display", "Filling screen RED");
+          it.fill(Color(255, 0, 0));    // Pure Red
+          break;
+        case 1:
+          ESP_LOGI("display", "Filling screen GREEN"); 
+          it.fill(Color(0, 255, 0));    // Pure Green
+          break;
+        case 2:
+          ESP_LOGI("display", "Filling screen BLUE");
+          it.fill(Color(0, 0, 255));    // Pure Blue
+          break;
+        case 3:
+          ESP_LOGI("display", "Filling screen YELLOW");
+          it.fill(Color(255, 255, 0));  // Yellow (Red + Green)
+          break;
+        case 4:
+          ESP_LOGI("display", "Filling screen MAGENTA");
+          it.fill(Color(255, 0, 255));  // Magenta (Red + Blue)
+          break;
+        case 5:
+          ESP_LOGI("display", "Filling screen CYAN");
+          it.fill(Color(0, 255, 255));  // Cyan (Green + Blue)
+          break;
+        case 6:
+          ESP_LOGI("display", "Filling screen WHITE");
+          it.fill(Color(255, 255, 255)); // White
+          break;
+        case 7:
+          ESP_LOGI("display", "Filling screen BLACK");
+          it.fill(Color(0, 0, 0));      // Black
+          break;
+      }
+      color_phase++;
 
 # GT911 Touchscreen (standard ESPHome component)
 touchscreen:

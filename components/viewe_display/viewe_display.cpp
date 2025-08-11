@@ -48,7 +48,7 @@ void VieweDisplay::init_lcd_() {
   panel_config.data_width = 16; // RGB565
   panel_config.psram_trans_align = 64;
   panel_config.num_fbs = 1; // Single buffering
-  panel_config.bounce_buffer_size_px = 0; // No bounce buffer for now
+  panel_config.bounce_buffer_size_px = 10 * this->width_; // Bounce buffer for 10 lines
   panel_config.clk_src = LCD_CLK_SRC_DEFAULT;
   
   // Configure pins
@@ -119,28 +119,12 @@ void VieweDisplay::init_lcd_() {
 void VieweDisplay::update() {
   ESP_LOGD(TAG, "Update called");
   
-  // Always draw a test pattern for now to verify display works
-  uint16_t *buf = (uint16_t *)this->buffer_;
-  static int test_color = 0;
+  // Clear the buffer first
+  this->clear();
   
-  // Draw vertical stripes to test RGB ordering
-  for (int y = 0; y < this->height_; y++) {
-    for (int x = 0; x < this->width_; x++) {
-      int idx = y * this->width_ + x;
-      if (x < this->width_ / 3) {
-        // Red stripe (but might show as blue due to BGR)
-        buf[idx] = 0xF800;
-      } else if (x < 2 * this->width_ / 3) {
-        // Green stripe
-        buf[idx] = 0x07E0;
-      } else {
-        // Blue stripe (but might show as red due to BGR)
-        buf[idx] = 0x001F;
-      }
-    }
-  }
-  
-  ESP_LOGW(TAG, "Drew test pattern - R/G/B stripes");
+  // Execute the display update callbacks and lambda
+  // This calls the lambda defined in the YAML file
+  this->do_update_();
   
   // Now display the updated buffer to the LCD panel  
   this->display_();

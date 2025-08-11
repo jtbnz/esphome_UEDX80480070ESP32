@@ -19,23 +19,8 @@ void VieweDisplay::setup() {
   this->init_backlight_();
   this->init_lcd_();
   
-  // Allocate buffer for drawing
-  size_t buffer_size = this->get_buffer_length_();
-  ESP_LOGCONFIG(TAG, "Allocating buffer size: %zu bytes", buffer_size);
-  this->buffer_ = (uint16_t *)heap_caps_malloc(buffer_size, MALLOC_CAP_SPIRAM | MALLOC_CAP_8BIT);
-  if (this->buffer_ == nullptr) {
-    ESP_LOGE(TAG, "Could not allocate buffer for display!");
-    this->mark_failed();
-    return;
-  }
-  ESP_LOGCONFIG(TAG, "Buffer allocated at: %p", this->buffer_);
-  
-  // Initialize buffer to black (will be overwritten by lambda)
-  memset(this->buffer_, 0, buffer_size);
-  ESP_LOGCONFIG(TAG, "Buffer initialized");
-  
-  // Force initial display update
-  this->display_();
+  // Initialize the DisplayBuffer base class
+  this->init_internal_(this->get_buffer_length_());
   
   ESP_LOGCONFIG(TAG, "VIEWE RGB Display setup completed");
 }
@@ -130,16 +115,55 @@ void VieweDisplay::init_lcd_() {
 }
 
 void VieweDisplay::update() {
-  // Execute the ESPHome display lambda (this calls draw_pixel_at)
+  ESP_LOGD(TAG, "Update called - clearing buffer and executing lambda");
+  
+  // Clear the buffer first
+  this->clear();
+  
+  // Execute the display update callbacks and lambda
   this->do_update_();
-  // Now display the updated buffer to the LCD panel
+  
+  // If buffer is still all black, draw a test pattern
+  uint16_t *buf = (uint16_t *)this->buffer_;
+  bool all_black = true;
+  for (int i = 0; i < 100; i++) {
+    if (buf[i] != 0) {
+      all_black = false;
+      break;
+    }
+  }
+  
+  if (all_black) {
+    ESP_LOGW(TAG, "Buffer is all black after lambda - drawing test pattern");
+    // Draw red, green, blue stripes as a test
+    for (int y = 0; y < this->height_; y++) {
+      for (int x = 0; x < this->width_; x++) {
+        if (x < this->width_ / 3) {
+          // Red stripe
+          buf[y * this->width_ + x] = 0xF800;
+        } else if (x < 2 * this->width_ / 3) {
+          // Green stripe  
+          buf[y * this->width_ + x] = 0x07E0;
+        } else {
+          // Blue stripe
+          buf[y * this->width_ + x] = 0x001F;
+        }
+      }
+    }
+  }
+  
+  ESP_LOGD(TAG, "Lambda executed, displaying to panel");
+  
+  // Now display the updated buffer to the LCD panel  
   this->display_();
 }
 
 void VieweDisplay::display_() {
   if (this->panel_handle_ != nullptr && this->buffer_ != nullptr) {
     ESP_LOGD(TAG, "Drawing bitmap to display...");
-    esp_err_t err = esp_lcd_panel_draw_bitmap(this->panel_handle_, 0, 0, this->width_, this->height_, this->buffer_);
+    // Convert buffer to RGB565 format and send to LCD
+    uint16_t *rgb565_buffer = (uint16_t *)this->buffer_;
+    esp_err_t err = esp_lcd_panel_draw_bitmap(this->panel_handle_, 0, 0, this->width_, this->height_, rgb565_buffer);
     if (err != ESP_OK) {
       ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(err));
     } else {
@@ -150,14 +174,15 @@ void VieweDisplay::display_() {
   }
 }
 
-void VieweDisplay::draw_pixel_at(int x, int y, Color color) {
+void VieweDisplay::draw_absolute_pixel_internal(int x, int y, Color color) {
   if (x >= this->get_width_internal() || x < 0 || y >= this->get_height_internal() || y < 0) {
     return;
   }
   
-  // Convert to RGB565
+  // Convert to RGB565 and write to DisplayBuffer's buffer
   uint16_t color565 = ((color.red & 0xF8) << 8) | ((color.green & 0xFC) << 3) | (color.blue >> 3);
-  this->buffer_[y * this->width_ + x] = color565;
+  uint16_t *buffer = (uint16_t *)this->buffer_;
+  buffer[y * this->width_ + x] = color565;
 }
 
 void VieweDisplay::dump_config() {

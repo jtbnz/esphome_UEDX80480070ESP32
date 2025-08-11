@@ -60,9 +60,10 @@ display:
     id: main_display
     width: 800
     height: 480
-    # RGB565 data pins (16 pins total)
-    # B0-B4, G0-G5, R0-R4
-    data_pins: [8, 3, 46, 9, 1, 5, 6, 7, 15, 16, 4, 45, 48, 47, 21, 14]
+    # RGB pins matching working config
+    red_pins: [14, 21, 47, 48, 45]
+    green_pins: [4, 16, 15, 7, 6, 5]  
+    blue_pins: [1, 9, 46, 3, 8]
     # Control pins
     de_pin: 40
     pclk_pin: 42
@@ -70,81 +71,22 @@ display:
     vsync_pin: 41
     # Optional pins
     backlight_pin: 2
-    # Timing (based on VIEWE reference code)
-    pixel_clock_frequency: 14MHz
-    hsync_pulse_width: 4
-    hsync_back_porch: 8
-    hsync_front_porch: 8
-    vsync_pulse_width: 4
-    vsync_back_porch: 8
-    vsync_front_porch: 8
-    update_interval: 16ms  # ~60fps
-    lambda: |-
-      // RGB565 Test Card - Proves 16-bit color depth
-      
-      // Background gradient
-      it.filled_rectangle(0, 0, 800, 480, Color(26, 26, 46));
-      
-      // Header
-      it.filled_rectangle(10, 10, 780, 60, Color(15, 52, 96));
-      it.print(400, 25, id(font_large), Color::WHITE, TextAlign::CENTER, 
-               "VIEWE 7\" RGB565 - 65,536 Colors");
-      
-      // RGB gradient test - proves 16-bit depth
-      it.print(400, 100, id(font_medium), Color::WHITE, TextAlign::CENTER, 
-               "RGB565 Gradients (32R/64G/32B levels)");
-      
-      // Red gradient (0 to 255, shows 32 levels in RGB565)
-      for (int x = 0; x < 240; x++) {
-        uint8_t red_val = (x * 255) / 239;
-        Color red_grad(red_val, 0, 0);
-        it.vertical_line(50 + x, 140, 30, red_grad);
-      }
-      it.print(170, 175, id(font_small), Color::WHITE, TextAlign::CENTER, "RED");
-      
-      // Green gradient (0 to 255, shows 64 levels in RGB565) 
-      for (int x = 0; x < 240; x++) {
-        uint8_t green_val = (x * 255) / 239;
-        Color green_grad(0, green_val, 0);
-        it.vertical_line(280 + x, 140, 30, green_grad);
-      }
-      it.print(400, 175, id(font_small), Color::WHITE, TextAlign::CENTER, "GREEN");
-      
-      // Blue gradient (0 to 255, shows 32 levels in RGB565)
-      for (int x = 0; x < 240; x++) {
-        uint8_t blue_val = (x * 255) / 239;
-        Color blue_grad(0, 0, blue_val);
-        it.vertical_line(510 + x, 140, 30, blue_grad);
-      }
-      it.print(630, 175, id(font_small), Color::WHITE, TextAlign::CENTER, "BLUE");
-      
-      // 16-bit color palette - colors impossible with 16-color displays
-      it.print(400, 220, id(font_medium), Color::WHITE, TextAlign::CENTER,
-               "16-bit Color Palette (Impossible with 16-color displays)");
-      
-      // Array of intermediate colors proving 16-bit depth
-      Color test_colors[] = {
-        Color(255, 128, 128), Color(128, 255, 128), Color(128, 128, 255),
-        Color(255, 255, 128), Color(255, 128, 255), Color(128, 255, 255),
-        Color(255, 64, 64),   Color(64, 255, 64),   Color(64, 64, 255),
-        Color(255, 192, 64),  Color(192, 64, 255),  Color(64, 255, 192),
-        Color(255, 0, 128),   Color(128, 255, 0),   Color(0, 128, 255),
-        Color(255, 128, 0),   Color(128, 0, 255),   Color(0, 255, 128)
-      };
-      
-      for (int i = 0; i < 18; i++) {
-        int row = i / 9;
-        int col = i % 9;
-        int x = 80 + col * 70;
-        int y = 250 + row * 50;
-        it.filled_rectangle(x, y, 60, 40, test_colors[i]);
-        it.rectangle(x, y, 60, 40, Color::WHITE);
-      }
-      
-      // Status information
-      it.filled_rectangle(20, 420, 760, 40, Color(15, 52, 96));
-      it.print(400, 430, id(font_medium), Color(0, 255, 136), TextAlign::CENTER,
-               "✓ RGB565 Active | ESP-IDF RGB LCD | Ready for Touch");
+    # Timing matching working config with sync polarity 
+    pixel_clock_frequency: 16MHz
+    pclk_inverted: true
+    hsync_idle_low: false
+    vsync_idle_low: false
+    de_idle_high: false
+    hsync_pulse_width: 48
+    hsync_back_porch: 40
+    hsync_front_porch: 40
+    vsync_pulse_width: 1
+    vsync_back_porch: 31
+    vsync_front_porch: 13
+    update_interval: 500ms  # Slow update for testing
+    # lambda: |-
+    #   // Simple test - just fill red
+    #   it.fill(Color(255, 0, 0));
 
 # GT911 Touchscreen (standard ESPHome component)
 touchscreen:

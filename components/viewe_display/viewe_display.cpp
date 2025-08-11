@@ -75,9 +75,19 @@ void VieweDisplay::init_lcd_() {
   panel_config.hsync_gpio_num = (gpio_num_t)this->hsync_pin_;
   panel_config.de_gpio_num = (gpio_num_t)this->de_pin_;
   
-  // Configure data pins
-  for (int i = 0; i < 16; i++) {
-    panel_config.data_gpio_nums[i] = (gpio_num_t)this->data_pins_[i];
+  // Configure RGB data pins (16 pins total: 5+6+5)
+  int pin_idx = 0;
+  // Blue pins (LSB first)
+  for (int i = 0; i < 5; i++) {
+    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->blue_pins_[i];
+  }
+  // Green pins (LSB first)
+  for (int i = 0; i < 6; i++) {
+    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->green_pins_[i];
+  }
+  // Red pins (LSB first)
+  for (int i = 0; i < 5; i++) {
+    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->red_pins_[i];
   }
   
   // Configure timing
@@ -90,7 +100,10 @@ void VieweDisplay::init_lcd_() {
   panel_config.timings.vsync_pulse_width = this->vsync_pulse_width_;
   panel_config.timings.vsync_back_porch = this->vsync_back_porch_;
   panel_config.timings.vsync_front_porch = this->vsync_front_porch_;
-  panel_config.timings.flags.pclk_active_neg = true;
+  panel_config.timings.flags.pclk_active_neg = this->pclk_inverted_;
+  panel_config.timings.flags.hsync_idle_low = this->hsync_idle_low_;
+  panel_config.timings.flags.vsync_idle_low = this->vsync_idle_low_;
+  panel_config.timings.flags.de_idle_high = this->de_idle_high_;
   
   // Use PSRAM for framebuffer
   panel_config.flags.fb_in_psram = true;
@@ -150,11 +163,13 @@ void VieweDisplay::draw_pixel_at(int x, int y, Color color) {
 void VieweDisplay::dump_config() {
   ESP_LOGCONFIG(TAG, "VIEWE RGB Display:");
   ESP_LOGCONFIG(TAG, "  Width: %d, Height: %d", this->width_, this->height_);
-  ESP_LOGCONFIG(TAG, "  Data Pins: [%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d,%d]", 
-                this->data_pins_[0], this->data_pins_[1], this->data_pins_[2], this->data_pins_[3],
-                this->data_pins_[4], this->data_pins_[5], this->data_pins_[6], this->data_pins_[7],
-                this->data_pins_[8], this->data_pins_[9], this->data_pins_[10], this->data_pins_[11],
-                this->data_pins_[12], this->data_pins_[13], this->data_pins_[14], this->data_pins_[15]);
+  ESP_LOGCONFIG(TAG, "  Red Pins: [%d,%d,%d,%d,%d]", 
+                this->red_pins_[0], this->red_pins_[1], this->red_pins_[2], this->red_pins_[3], this->red_pins_[4]);
+  ESP_LOGCONFIG(TAG, "  Green Pins: [%d,%d,%d,%d,%d,%d]", 
+                this->green_pins_[0], this->green_pins_[1], this->green_pins_[2], 
+                this->green_pins_[3], this->green_pins_[4], this->green_pins_[5]);
+  ESP_LOGCONFIG(TAG, "  Blue Pins: [%d,%d,%d,%d,%d]", 
+                this->blue_pins_[0], this->blue_pins_[1], this->blue_pins_[2], this->blue_pins_[3], this->blue_pins_[4]);
   ESP_LOGCONFIG(TAG, "  DE Pin: %d", this->de_pin_);
   ESP_LOGCONFIG(TAG, "  PCLK Pin: %d", this->pclk_pin_);
   ESP_LOGCONFIG(TAG, "  HSYNC Pin: %d", this->hsync_pin_);
@@ -163,6 +178,7 @@ void VieweDisplay::dump_config() {
     ESP_LOGCONFIG(TAG, "  Backlight Pin: %d", this->backlight_pin_);
   }
   ESP_LOGCONFIG(TAG, "  Pixel Clock: %.1f MHz", this->pixel_clock_frequency_ / 1e6);
+  ESP_LOGCONFIG(TAG, "  PCLK Inverted: %s", this->pclk_inverted_ ? "YES" : "NO");
   ESP_LOGCONFIG(TAG, "  Color Depth: 16-bit RGB565");
   ESP_LOGCONFIG(TAG, "  Update Interval: %.3fs", this->get_update_interval() / 1000.0f);
 }

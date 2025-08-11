@@ -16,8 +16,14 @@ class VieweDisplay : public display::Display {
   void set_width(uint16_t width) { this->width_ = width; }
   void set_height(uint16_t height) { this->height_ = height; }
   
-  void set_data_pin(uint8_t index, uint8_t pin) { 
-    if (index < 16) this->data_pins_[index] = pin; 
+  void set_red_pin(uint8_t index, uint8_t pin) { 
+    if (index < 5) this->red_pins_[index] = pin; 
+  }
+  void set_green_pin(uint8_t index, uint8_t pin) { 
+    if (index < 6) this->green_pins_[index] = pin; 
+  }
+  void set_blue_pin(uint8_t index, uint8_t pin) { 
+    if (index < 5) this->blue_pins_[index] = pin; 
   }
   void set_de_pin(uint8_t pin) { this->de_pin_ = pin; }
   void set_pclk_pin(uint8_t pin) { this->pclk_pin_ = pin; }
@@ -28,6 +34,10 @@ class VieweDisplay : public display::Display {
   void set_backlight_pin(uint8_t pin) { this->backlight_pin_ = pin; }
   
   void set_pixel_clock_frequency(uint32_t freq) { this->pixel_clock_frequency_ = freq; }
+  void set_pclk_inverted(bool inverted) { this->pclk_inverted_ = inverted; }
+  void set_hsync_idle_low(bool idle_low) { this->hsync_idle_low_ = idle_low; }
+  void set_vsync_idle_low(bool idle_low) { this->vsync_idle_low_ = idle_low; }
+  void set_de_idle_high(bool idle_high) { this->de_idle_high_ = idle_high; }
   void set_hsync_pulse_width(uint16_t width) { this->hsync_pulse_width_ = width; }
   void set_hsync_back_porch(uint16_t porch) { this->hsync_back_porch_ = porch; }
   void set_hsync_front_porch(uint16_t porch) { this->hsync_front_porch_ = porch; }
@@ -55,7 +65,9 @@ class VieweDisplay : public display::Display {
   
   uint16_t width_{800};
   uint16_t height_{480};
-  uint8_t data_pins_[16];
+  uint8_t red_pins_[5];
+  uint8_t green_pins_[6];
+  uint8_t blue_pins_[5];
   uint8_t de_pin_{40};
   uint8_t pclk_pin_{42};
   uint8_t hsync_pin_{39};
@@ -65,6 +77,10 @@ class VieweDisplay : public display::Display {
   uint8_t backlight_pin_{2};
   
   uint32_t pixel_clock_frequency_{16000000};
+  bool pclk_inverted_{true};
+  bool hsync_idle_low_{false};
+  bool vsync_idle_low_{false};
+  bool de_idle_high_{false};
   uint16_t hsync_pulse_width_{10};
   uint16_t hsync_back_porch_{10};
   uint16_t hsync_front_porch_{20};

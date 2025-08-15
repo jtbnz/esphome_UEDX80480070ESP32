@@ -9,10 +9,10 @@ esphome:
 esp32:
   board: esp32-s3-devkitc-1
   variant: esp32s3
+  flash_size: 16MB
+  partitions: partitions_16MB.csv
   framework:
     type: esp-idf
-    version: 5.1.2
-    platform_version: 6.5.0
     sdkconfig_options:
       # PSRAM configuration
       CONFIG_ESP32S3_SPIRAM_SUPPORT: y
@@ -29,11 +29,16 @@ esp32:
       CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL: "4096"
       CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL: "32768"
 
+
+psram:
+  mode: octal
+  speed: 80MHz  
+
 # External components - pointing to the custom component directory
 external_components:
   - source:
       type: local
-      path: ./viewe_display
+      path: components
     components: [viewe_display]
 
 # Logger configuration
@@ -43,129 +48,153 @@ logger:
 # Enable Home Assistant API
 api:
   encryption:
-    key: "YOUR_ENCRYPTION_KEY_HERE"
+    key: "addyourkeyhere"
 
 # OTA updates
 ota:
   - platform: esphome
-    password: "YOUR_OTA_PASSWORD_HERE"
+    password: "addyourkeyhere"
 
-# WiFi configuration
 wifi:
-  ssid: "YOUR_WIFI_SSID"
-  password: "YOUR_WIFI_PASSWORD"
-  
-  # Enable fallback hotspot in case wifi connection fails
+  ssid: !secret wifi_ssid
+  password: !secret wifi_password
   ap:
-    ssid: "Viewe-Display Fallback"
-    password: "fallback123"
+    ssid: "Chair-Display Fallback Hotspot"
+    password: "xzQ3MxpXU8jM"
 
-# Web server for debugging
+
+# Web server disabled to save space
 web_server:
-  port: 80
+   port: 80
 
-# I2C configuration for touch (GT911)
-i2c:
-  sda: GPIO19
-  scl: GPIO20
-  frequency: 400kHz
-  id: touch_i2c
 
-# Touch configuration using ESPHome's gt911 component
-touchscreen:
-  platform: gt911
-  id: my_touchscreen
-  i2c_id: touch_i2c
-  interrupt_pin: GPIO18
-  reset_pin: GPIO38
-  # Touch coordinates might need calibration
-  transform:
-    swap_xy: false
-    mirror_x: false
-    mirror_y: false
-
-# Display configuration using custom component
+# Display configuration using custom component with LVGL
 display:
   - platform: viewe_display
     id: my_display
-    backlight_pin: GPIO2
     brightness: 100%
-    update_interval: 16ms  # ~60 FPS
-    lambda: |-
-      // Example: Draw some test patterns
-      
-      // Clear screen with white
-      it.fill(Color(255, 255, 255));
-      
-      // Draw a red rectangle
-      it.rectangle(50, 50, 200, 100, Color(255, 0, 0));
-      
-      // Draw a filled blue circle
-      it.filled_circle(400, 240, 50, Color(0, 0, 255));
-      
-      // Draw some text (requires font configuration)
-      // it.print(400, 100, id(my_font), "VIEWE Display");
-      
-      // Draw a green line
-      it.line(100, 300, 700, 300, Color(0, 255, 0));
-      
-      // Example of using touch input
-      if (id(my_touchscreen).touched) {
-        auto touch_point = id(my_touchscreen).touches[0];
-        // Draw a circle at touch point
-        it.filled_circle(touch_point.x, touch_point.y, 20, Color(255, 0, 255));
-      }
+    auto_clear_enabled: false  # LVGL handles clearing
 
-# Optional: Add fonts for text display
-# font:
-#   - file: "fonts/Arial.ttf"
-#     id: my_font
-#     size: 24
+# LVGL Graphics configuration
+lvgl:
+  displays:
+    - my_display
+  touchscreens:
+    - touchscreen_id: touch
+  buffer_size: 50%  # Reduced buffer size to save memory
+  log_level: WARN  # Less logging to save space
+  color_depth: 16
+  byte_order: big_endian
+  #disp_bg_color: 0x000000
+  bg_image_src: starry_night
+  
+  # Define pages
+  pages:
+    - id: main_page
+      widgets:
+        # Simple buttons without container
+        - button:
+            x: 50
+            y: 50
+            width: 150
+            height: 60
+            widgets:
+              - label:
+                  text: "Light ON"
+                  align: CENTER
+            on_press:
+              - light.turn_on: 
+                  id: back_light
+                  brightness: 100%
+        
+        - button:
+            x: 250
+            y: 50
+            width: 150
+            height: 60
+            widgets:
+              - label:
+                  text: "Light OFF"
+                  align: CENTER
+            on_press:
+              - light.turn_off: back_light
+        
+        - button:
+            x: 450
+            y: 50
+            width: 150
+            height: 60
+            checkable: true
+            widgets:
+              - label:
+                  text: "Toggle LED"
+                  align: CENTER
+            on_press:
+              - light.toggle: 
+                  id: status_led
 
-# Optional: Add images
-# image:
-#   - file: "images/logo.png"
-#     id: my_logo
-#     type: RGB24
 
-# Optional: Add pages for multi-screen support
-# pages:
-#   - id: page1
-#     lambda: |-
-#       it.fill(Color(255, 255, 255));
-#       it.print(400, 240, id(my_font), TextAlign::CENTER, "Page 1");
-#   - id: page2
-#     lambda: |-
-#       it.fill(Color(200, 200, 200));
-#       it.print(400, 240, id(my_font), TextAlign::CENTER, "Page 2");
+# Add background image
+image:
+  - file: "starrynight.png"
+    id: starry_night
+    type: RGB565
+    resize: 800x480
 
-# Button for testing (using BOOT button on GPIO0)
-binary_sensor:
-  - platform: gpio
-    pin:
-      number: GPIO0
-      inverted: true
-      mode:
-        input: true
-        pullup: true
-    name: "Boot Button"
-    on_press:
-      then:
-        - logger.log: "Boot button pressed"
-        # Optional: Switch display pages
-        # - display.page.next: my_display
+
+# Touchscreen configuration
+touchscreen:
+  platform: gt911
+  id: touch
+  #interrupt_pin: 18 # no idea why but removing this made it work!
+  #interrupt_pin: GPIO18
+  reset_pin: GPIO38
+  calibration:
+    x_min: 0
+    x_max: 800
+    y_min: 0
+    y_max: 475
+
+  on_touch:
+    - lambda: |-
+        ESP_LOGI("cal", "x=%d, y=%d, x_raw=%d, y_raw=%0d",
+            touch.x,
+            touch.y,
+            touch.x_raw,
+            touch.y_raw
+            );
+    - light.turn_on:
+        id: back_light
+        brightness: 100%
+    - script.execute: backlight_timer
+
+# I2C bus configuration
+i2c:
+  sda: GPIO19
+  scl: GPIO20
+  frequency: 100kHz
+  scan: True
 
 # Optional: Light component for backlight control
 light:
   - platform: monochromatic
+    id: back_light
     name: "Display Backlight"
-    output: backlight_output
+    output: gpio_backlight_pwm
     default_transition_length: 250ms
+    restore_mode: ALWAYS_OFF  # Start with backlight off
+  - platform: esp32_rmt_led_strip
+    id: status_led
+    rgb_order: GRB
+    pin: 0
+    num_leds: 1
+    chipset: ws2812
+    name: "status LED"    
 
 output:
   - platform: ledc
     pin: GPIO2
-    id: backlight_output
+    id: gpio_backlight_pwm
     frequency: 1000Hz
 
 # Optional: Sensors for monitoring
@@ -185,3 +214,11 @@ time:
     # - platform: sntp
     #   id: sntp_time
     #   timezone: "America/New_York"
+
+# Script to turn off backlight after timeout
+script:
+  - id: backlight_timer
+    mode: restart  # Restart timer on each touch
+    then:
+      - delay: 30s  # Turn off after 30 seconds of no touch
+      - light.turn_off: back_light

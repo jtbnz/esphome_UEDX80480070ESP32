@@ -1,7 +1,8 @@
 #include "viewe_display.h"
-#include "esphome/core/log.h"
 #include "esphome/core/helpers.h"
+#include "esphome/core/log.h"
 #include "esp_heap_caps.h"
+#include <cstring>
 
 namespace esphome {
 namespace viewe_display {
@@ -9,7 +10,7 @@ namespace viewe_display {
 static const char *const TAG = "viewe_display";
 
 void VieweDisplay::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up VIEWE 7inch 800x480 Display...");
+  ESP_LOGCONFIG(TAG, "Setting up VIEWE Display...");
   
   // Initialize backlight pin if specified
   if (this->backlight_pin_ != GPIO_NUM_NC) {
@@ -29,10 +30,14 @@ void VieweDisplay::setup() {
   // Allocate display buffer in PSRAM
   this->init_internal_(this->get_buffer_length_());
   
-  // Turn on backlight if pin is configured
-  if (this->backlight_pin_ != GPIO_NUM_NC) {
-    gpio_set_level(static_cast<gpio_num_t>(this->backlight_pin_), 1);
+  if (this->buffer_ == nullptr) {
+    ESP_LOGE(TAG, "Failed to allocate display buffer");
+    this->mark_failed();
+    return;
   }
+  
+  // Apply initial brightness setting
+  this->set_brightness(this->brightness_);
   
   ESP_LOGCONFIG(TAG, "VIEWE Display setup complete");
 }
@@ -49,14 +54,16 @@ void VieweDisplay::update() {
 
 void VieweDisplay::dump_config() {
   ESP_LOGCONFIG(TAG, "VIEWE Display:");
-  ESP_LOGCONFIG(TAG, "  Width: 800");
-  ESP_LOGCONFIG(TAG, "  Height: 480");
-  ESP_LOGCONFIG(TAG, "  Backlight Pin: %d", this->backlight_pin_);
-  ESP_LOGCONFIG(TAG, "  Brightness: %.2f", this->brightness_);
+  ESP_LOGCONFIG(TAG, "  Width: %d", DISPLAY_WIDTH);
+  ESP_LOGCONFIG(TAG, "  Height: %d", DISPLAY_HEIGHT);
+  ESP_LOGCONFIG(TAG, "  Color Mode: RGB565");
+  ESP_LOGCONFIG(TAG, "  Backlight Pin: %s", 
+                this->backlight_pin_ != GPIO_NUM_NC ? std::to_string(this->backlight_pin_).c_str() : "None");
+  ESP_LOGCONFIG(TAG, "  Brightness: %.0f%%", this->brightness_ * 100);
 }
 
 void VieweDisplay::init_lcd_panel_() {
-  ESP_LOGD(TAG, "Initializing RGB LCD panel");
+  ESP_LOGD(TAG, "Initializing RGB LCD panel...");
   
   esp_lcd_rgb_panel_config_t panel_config = {};
   panel_config.clk_src = LCD_CLK_SRC_PLL160M;
@@ -88,8 +95,8 @@ void VieweDisplay::init_lcd_panel_() {
   
   // Timing parameters for 800x480 display
   panel_config.timings.pclk_hz = 15 * 1000 * 1000;  // 15MHz pixel clock
-  panel_config.timings.h_res = 800;
-  panel_config.timings.v_res = 480;
+  panel_config.timings.h_res = DISPLAY_WIDTH;
+  panel_config.timings.v_res = DISPLAY_HEIGHT;
   panel_config.timings.hsync_pulse_width = 48;
   panel_config.timings.hsync_back_porch = 40;
   panel_config.timings.hsync_front_porch = 88;
@@ -107,7 +114,7 @@ void VieweDisplay::init_lcd_panel_() {
   panel_config.flags.bb_invalidate_cache = false;
   
   // Configure bounce buffer for better performance
-  panel_config.bounce_buffer_size_px = 800 * 10;  // 10 lines bounce buffer
+  panel_config.bounce_buffer_size_px = DISPLAY_WIDTH * 10;  // 10 lines bounce buffer
   
   esp_err_t ret = esp_lcd_new_rgb_panel(&panel_config, &this->lcd_panel_);
   if (ret != ESP_OK) {
@@ -128,6 +135,11 @@ void VieweDisplay::init_lcd_panel_() {
 
 void VieweDisplay::draw_absolute_pixel_internal(int x, int y, Color color) {
   if (x < 0 || x >= this->get_width_internal() || y < 0 || y >= this->get_height_internal()) {
+    return;
+  }
+  
+  if (this->buffer_ == nullptr) {
+    ESP_LOGE(TAG, "Buffer not initialized");
     return;
   }
   
@@ -163,10 +175,13 @@ void VieweDisplay::update_display_() {
 void VieweDisplay::set_brightness(float brightness) {
   this->brightness_ = clamp(brightness, 0.0f, 1.0f);
   
+  if (this->backlight_pin_ == GPIO_NUM_NC) {
+    return;  // No backlight pin configured
+  }
+  
   if (this->brightness_ > 0) {
     gpio_set_level(static_cast<gpio_num_t>(this->backlight_pin_), 1);
-    // Note: For PWM brightness control, you would need to implement PWM here
-    // For now, it's just on/off
+    // TODO: Implement PWM brightness control for variable brightness
   } else {
     gpio_set_level(static_cast<gpio_num_t>(this->backlight_pin_), 0);
   }

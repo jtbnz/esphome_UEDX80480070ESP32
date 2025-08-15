@@ -2,6 +2,7 @@
 
 #include "esphome/core/component.h"
 #include "esphome/components/display/display_buffer.h"
+#include "esphome/core/defines.h"
 #include "esp_lcd_panel_ops.h"
 #include "esp_lcd_panel_rgb.h"
 #include "driver/gpio.h"
@@ -9,7 +10,12 @@
 namespace esphome {
 namespace viewe_display {
 
-class VieweDisplay : public display::DisplayBuffer {
+// Display dimensions
+static const uint16_t DISPLAY_WIDTH = 800;
+static const uint16_t DISPLAY_HEIGHT = 480;
+static const uint8_t BITS_PER_PIXEL = 16;  // RGB565
+
+class VieweDisplay : public display::DisplayBuffer, public Component {
  public:
   void setup() override;
   void loop() override;
@@ -24,9 +30,9 @@ class VieweDisplay : public display::DisplayBuffer {
 
  protected:
   void draw_absolute_pixel_internal(int x, int y, Color color) override;
-  int get_height_internal() override { return 480; }
-  int get_width_internal() override { return 800; }
-  size_t get_buffer_length_() { return 800 * 480 * 2; } // RGB565
+  int get_height_internal() override { return DISPLAY_HEIGHT; }
+  int get_width_internal() override { return DISPLAY_WIDTH; }
+  size_t get_buffer_length_() { return DISPLAY_WIDTH * DISPLAY_HEIGHT * (BITS_PER_PIXEL / 8); }
   
   void init_lcd_panel_();
   void update_display_();

@@ -13,12 +13,39 @@ This is a custom ESPHome component for the VIEWE UEDX80480070E-WB-A 7-inch 800x4
 
 ## Installation
 
-1. Copy the `viewe_display` folder to your ESPHome configuration directory:
+### Option 1: Use from GitHub (Recommended)
+
+Add this to your ESPHome configuration:
+
+```yaml
+external_components:
+  - source:
+      type: git
+      url: https://github.com/jtbnz/esphome_UEDX80480070ESP32
+      ref: main
+    components: [viewe_display]
+```
+
+### Option 2: Local Installation
+
+1. Clone the repository:
    ```bash
-   cp -r viewe_display /config/esphome/custom_components/
+   git clone https://github.com/jtbnz/esphome_UEDX80480070ESP32.git
    ```
 
-2. Or reference it as an external component in your YAML (see example_config.yaml)
+2. Copy the components folder to your ESPHome configuration:
+   ```bash
+   cp -r esphome_UEDX80480070ESP32/components/viewe_display /config/esphome/custom_components/
+   ```
+
+3. Reference it locally in your YAML:
+   ```yaml
+   external_components:
+     - source:
+         type: local
+         path: custom_components
+       components: [viewe_display]
+   ```
 
 ## Hardware Specifications
 
@@ -46,11 +73,12 @@ This is a custom ESPHome component for the VIEWE UEDX80480070E-WB-A 7-inch 800x4
 ## Basic Usage
 
 ```yaml
-# Include the custom component
+# Include the custom component from GitHub
 external_components:
   - source:
-      type: local
-      path: ./viewe_display
+      type: git
+      url: https://github.com/jtbnz/esphome_UEDX80480070ESP32
+      ref: main
     components: [viewe_display]
 
 # Configure the display

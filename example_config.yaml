@@ -34,11 +34,12 @@ psram:
   mode: octal
   speed: 80MHz  
 
-# External components - pointing to the custom component directory
+# External components - sourced from GitHub repository
 external_components:
   - source:
-      type: local
-      path: components
+      type: git
+      url: https://github.com/jtbnz/esphome_UEDX80480070ESP32
+      ref: main
     components: [viewe_display]
 
 # Logger configuration

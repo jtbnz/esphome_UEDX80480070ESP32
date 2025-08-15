@@ -1,11 +1,7 @@
 #include "viewe_display.h"
 #include "esphome/core/log.h"
 #include "esphome/core/helpers.h"
-
-#ifdef USE_ESP_IDF
-#include <esp_lcd_panel_rgb.h>
-#include <esp_lcd_panel_ops.h>
-#include <driver/gpio.h>
+#include "esp_heap_caps.h"
 
 namespace esphome {
 namespace viewe_display {
@@ -13,174 +9,168 @@ namespace viewe_display {
 static const char *const TAG = "viewe_display";
 
 void VieweDisplay::setup() {
-  ESP_LOGCONFIG(TAG, "Setting up VIEWE RGB Display...");
-  ESP_LOGCONFIG(TAG, "Display size: %dx%d", this->width_, this->height_);
+  ESP_LOGCONFIG(TAG, "Setting up VIEWE 7inch 800x480 Display...");
   
-  this->init_backlight_();
-  this->init_lcd_();
+  // Initialize backlight pin if specified
+  if (this->backlight_pin_ != GPIO_NUM_NC) {
+    gpio_config_t bk_gpio_config = {
+      .pin_bit_mask = 1ULL << this->backlight_pin_,
+      .mode = GPIO_MODE_OUTPUT,
+      .pull_up_en = GPIO_PULLUP_DISABLE,
+      .pull_down_en = GPIO_PULLDOWN_DISABLE,
+      .intr_type = GPIO_INTR_DISABLE,
+    };
+    gpio_config(&bk_gpio_config);
+  }
   
-  // Initialize the DisplayBuffer base class
+  // Initialize LCD panel
+  this->init_lcd_panel_();
+  
+  // Allocate display buffer in PSRAM
   this->init_internal_(this->get_buffer_length_());
   
-  ESP_LOGCONFIG(TAG, "VIEWE RGB Display setup completed");
+  // Turn on backlight if pin is configured
+  if (this->backlight_pin_ != GPIO_NUM_NC) {
+    gpio_set_level(static_cast<gpio_num_t>(this->backlight_pin_), 1);
+  }
+  
+  ESP_LOGCONFIG(TAG, "VIEWE Display setup complete");
 }
 
-void VieweDisplay::init_backlight_() {
-  if (this->backlight_pin_ != 255) {
-    ESP_LOGCONFIG(TAG, "Configuring backlight pin: %d", this->backlight_pin_);
-    gpio_config_t io_conf = {};
-    io_conf.pin_bit_mask = 1ULL << this->backlight_pin_;
-    io_conf.mode = GPIO_MODE_OUTPUT;
-    io_conf.pull_up_en = GPIO_PULLUP_DISABLE;
-    io_conf.pull_down_en = GPIO_PULLDOWN_DISABLE;
-    io_conf.intr_type = GPIO_INTR_DISABLE;
-    gpio_config(&io_conf);
-    gpio_set_level((gpio_num_t)this->backlight_pin_, 1);
-  }
-}
-
-void VieweDisplay::init_lcd_() {
-  ESP_LOGCONFIG(TAG, "Initializing RGB LCD panel...");
-  ESP_LOGCONFIG(TAG, "Panel config - Width: %d, Height: %d", this->width_, this->height_);
-  ESP_LOGCONFIG(TAG, "Pixel clock: %lu Hz", this->pixel_clock_frequency_);
-  
-  esp_lcd_rgb_panel_config_t panel_config = {};
-  panel_config.data_width = 16; // RGB565
-  panel_config.psram_trans_align = 64;
-  panel_config.num_fbs = 1; // Single buffering
-  panel_config.bounce_buffer_size_px = 10 * this->width_; // Bounce buffer for 10 lines
-  panel_config.clk_src = LCD_CLK_SRC_DEFAULT;
-  
-  // Configure pins
-  panel_config.disp_gpio_num = (this->enable_pin_ == 255) ? GPIO_NUM_NC : (gpio_num_t)this->enable_pin_;
-  panel_config.pclk_gpio_num = (gpio_num_t)this->pclk_pin_;
-  panel_config.vsync_gpio_num = (gpio_num_t)this->vsync_pin_;
-  panel_config.hsync_gpio_num = (gpio_num_t)this->hsync_pin_;
-  panel_config.de_gpio_num = (gpio_num_t)this->de_pin_;
-  
-  // Configure RGB data pins (16 pins total: 5+6+5)
-  // Using BGR order which was working before
-  int pin_idx = 0;
-  // Blue pins first (LSB first)
-  for (int i = 0; i < 5; i++) {
-    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->blue_pins_[i];
-  }
-  // Green pins (LSB first)
-  for (int i = 0; i < 6; i++) {
-    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->green_pins_[i];
-  }
-  // Red pins last (LSB first)
-  for (int i = 0; i < 5; i++) {
-    panel_config.data_gpio_nums[pin_idx++] = (gpio_num_t)this->red_pins_[i];
-  }
-  
-  // Configure timing
-  panel_config.timings.pclk_hz = this->pixel_clock_frequency_;
-  panel_config.timings.h_res = this->width_;
-  panel_config.timings.v_res = this->height_;
-  panel_config.timings.hsync_pulse_width = this->hsync_pulse_width_;
-  panel_config.timings.hsync_back_porch = this->hsync_back_porch_;
-  panel_config.timings.hsync_front_porch = this->hsync_front_porch_;
-  panel_config.timings.vsync_pulse_width = this->vsync_pulse_width_;
-  panel_config.timings.vsync_back_porch = this->vsync_back_porch_;
-  panel_config.timings.vsync_front_porch = this->vsync_front_porch_;
-  panel_config.timings.flags.pclk_active_neg = this->pclk_inverted_;
-  panel_config.timings.flags.hsync_idle_low = this->hsync_idle_low_;
-  panel_config.timings.flags.vsync_idle_low = this->vsync_idle_low_;
-  panel_config.timings.flags.de_idle_high = this->de_idle_high_;
-  
-  // Use PSRAM for framebuffer
-  panel_config.flags.fb_in_psram = true;
-  
-  ESP_LOGCONFIG(TAG, "Creating RGB panel...");
-  esp_err_t err = esp_lcd_new_rgb_panel(&panel_config, &this->panel_handle_);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "esp_lcd_new_rgb_panel failed: %s", esp_err_to_name(err));
-    this->mark_failed();
-    return;
-  }
-  ESP_LOGCONFIG(TAG, "RGB panel created successfully");
-  
-  ESP_LOGCONFIG(TAG, "Resetting panel...");
-  err = esp_lcd_panel_reset(this->panel_handle_);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Panel reset failed: %s", esp_err_to_name(err));
-  }
-  
-  ESP_LOGCONFIG(TAG, "Initializing panel...");
-  err = esp_lcd_panel_init(this->panel_handle_);
-  if (err != ESP_OK) {
-    ESP_LOGE(TAG, "Panel init failed: %s", esp_err_to_name(err));
-  }
-  
-  ESP_LOGCONFIG(TAG, "RGB LCD panel initialized successfully");
+void VieweDisplay::loop() {
+  // Update display if needed
+  this->do_update_();
 }
 
 void VieweDisplay::update() {
-  ESP_LOGD(TAG, "Update called");
-  
-  // Clear the buffer first
-  this->clear();
-  
-  // Execute the display update callbacks and lambda
-  // This calls the lambda defined in the YAML file
-  this->do_update_();
-  
-  // Now display the updated buffer to the LCD panel  
-  this->display_();
-}
-
-void VieweDisplay::display_() {
-  if (this->panel_handle_ != nullptr && this->buffer_ != nullptr) {
-    ESP_LOGD(TAG, "Drawing bitmap to display...");
-    // Convert buffer to RGB565 format and send to LCD
-    uint16_t *rgb565_buffer = (uint16_t *)this->buffer_;
-    esp_err_t err = esp_lcd_panel_draw_bitmap(this->panel_handle_, 0, 0, this->width_, this->height_, rgb565_buffer);
-    if (err != ESP_OK) {
-      ESP_LOGE(TAG, "Draw bitmap failed: %s", esp_err_to_name(err));
-    } else {
-      ESP_LOGD(TAG, "Bitmap drawn successfully");
-    }
-  } else {
-    ESP_LOGW(TAG, "Cannot draw - panel_handle_: %p, buffer_: %p", this->panel_handle_, this->buffer_);
-  }
-}
-
-void VieweDisplay::draw_absolute_pixel_internal(int x, int y, Color color) {
-  if (x >= this->get_width_internal() || x < 0 || y >= this->get_height_internal() || y < 0) {
-    return;
-  }
-  
-  // Convert to RGB565 and write to DisplayBuffer's buffer
-  uint16_t color565 = ((color.red & 0xF8) << 8) | ((color.green & 0xFC) << 3) | (color.blue >> 3);
-  uint16_t *buffer = (uint16_t *)this->buffer_;
-  buffer[y * this->width_ + x] = color565;
+  // Called periodically by ESPHome
+  this->update_display_();
 }
 
 void VieweDisplay::dump_config() {
-  ESP_LOGCONFIG(TAG, "VIEWE RGB Display:");
-  ESP_LOGCONFIG(TAG, "  Width: %d, Height: %d", this->width_, this->height_);
-  ESP_LOGCONFIG(TAG, "  Red Pins: [%d,%d,%d,%d,%d]", 
-                this->red_pins_[0], this->red_pins_[1], this->red_pins_[2], this->red_pins_[3], this->red_pins_[4]);
-  ESP_LOGCONFIG(TAG, "  Green Pins: [%d,%d,%d,%d,%d,%d]", 
-                this->green_pins_[0], this->green_pins_[1], this->green_pins_[2], 
-                this->green_pins_[3], this->green_pins_[4], this->green_pins_[5]);
-  ESP_LOGCONFIG(TAG, "  Blue Pins: [%d,%d,%d,%d,%d]", 
-                this->blue_pins_[0], this->blue_pins_[1], this->blue_pins_[2], this->blue_pins_[3], this->blue_pins_[4]);
-  ESP_LOGCONFIG(TAG, "  DE Pin: %d", this->de_pin_);
-  ESP_LOGCONFIG(TAG, "  PCLK Pin: %d", this->pclk_pin_);
-  ESP_LOGCONFIG(TAG, "  HSYNC Pin: %d", this->hsync_pin_);
-  ESP_LOGCONFIG(TAG, "  VSYNC Pin: %d", this->vsync_pin_);
-  if (this->backlight_pin_ != 255) {
-    ESP_LOGCONFIG(TAG, "  Backlight Pin: %d", this->backlight_pin_);
+  ESP_LOGCONFIG(TAG, "VIEWE Display:");
+  ESP_LOGCONFIG(TAG, "  Width: 800");
+  ESP_LOGCONFIG(TAG, "  Height: 480");
+  ESP_LOGCONFIG(TAG, "  Backlight Pin: %d", this->backlight_pin_);
+  ESP_LOGCONFIG(TAG, "  Brightness: %.2f", this->brightness_);
+}
+
+void VieweDisplay::init_lcd_panel_() {
+  ESP_LOGD(TAG, "Initializing RGB LCD panel");
+  
+  esp_lcd_rgb_panel_config_t panel_config = {};
+  panel_config.clk_src = LCD_CLK_SRC_PLL160M;
+  panel_config.psram_trans_align = 64;
+  panel_config.data_width = 16;
+  panel_config.bits_per_pixel = 16;
+  panel_config.de_gpio_num = LCD_GPIO_DE;
+  panel_config.pclk_gpio_num = LCD_GPIO_PCLK;
+  panel_config.vsync_gpio_num = LCD_GPIO_VSYNC;
+  panel_config.hsync_gpio_num = LCD_GPIO_HSYNC;
+  panel_config.disp_gpio_num = GPIO_NUM_NC;
+  
+  panel_config.data_gpio_nums[0] = LCD_GPIO_DATA0;
+  panel_config.data_gpio_nums[1] = LCD_GPIO_DATA1;
+  panel_config.data_gpio_nums[2] = LCD_GPIO_DATA2;
+  panel_config.data_gpio_nums[3] = LCD_GPIO_DATA3;
+  panel_config.data_gpio_nums[4] = LCD_GPIO_DATA4;
+  panel_config.data_gpio_nums[5] = LCD_GPIO_DATA5;
+  panel_config.data_gpio_nums[6] = LCD_GPIO_DATA6;
+  panel_config.data_gpio_nums[7] = LCD_GPIO_DATA7;
+  panel_config.data_gpio_nums[8] = LCD_GPIO_DATA8;
+  panel_config.data_gpio_nums[9] = LCD_GPIO_DATA9;
+  panel_config.data_gpio_nums[10] = LCD_GPIO_DATA10;
+  panel_config.data_gpio_nums[11] = LCD_GPIO_DATA11;
+  panel_config.data_gpio_nums[12] = LCD_GPIO_DATA12;
+  panel_config.data_gpio_nums[13] = LCD_GPIO_DATA13;
+  panel_config.data_gpio_nums[14] = LCD_GPIO_DATA14;
+  panel_config.data_gpio_nums[15] = LCD_GPIO_DATA15;
+  
+  // Timing parameters for 800x480 display
+  panel_config.timings.pclk_hz = 15 * 1000 * 1000;  // 15MHz pixel clock
+  panel_config.timings.h_res = 800;
+  panel_config.timings.v_res = 480;
+  panel_config.timings.hsync_pulse_width = 48;
+  panel_config.timings.hsync_back_porch = 40;
+  panel_config.timings.hsync_front_porch = 88;
+  panel_config.timings.vsync_pulse_width = 6;
+  panel_config.timings.vsync_back_porch = 26;
+  panel_config.timings.vsync_front_porch = 30;
+  panel_config.timings.flags.pclk_active_neg = true;
+  panel_config.timings.flags.de_idle_high = false;
+  panel_config.timings.flags.pclk_idle_high = false;
+  
+  // Use PSRAM for framebuffer
+  panel_config.flags.fb_in_psram = true;
+  panel_config.flags.double_fb = false;
+  panel_config.flags.no_fb = false;
+  panel_config.flags.bb_invalidate_cache = false;
+  
+  // Configure bounce buffer for better performance
+  panel_config.bounce_buffer_size_px = 800 * 10;  // 10 lines bounce buffer
+  
+  esp_err_t ret = esp_lcd_new_rgb_panel(&panel_config, &this->lcd_panel_);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to create RGB panel: %s", esp_err_to_name(ret));
+    this->mark_failed();
+    return;
   }
-  ESP_LOGCONFIG(TAG, "  Pixel Clock: %.1f MHz", this->pixel_clock_frequency_ / 1e6);
-  ESP_LOGCONFIG(TAG, "  PCLK Inverted: %s", this->pclk_inverted_ ? "YES" : "NO");
-  ESP_LOGCONFIG(TAG, "  Color Depth: 16-bit RGB565");
-  ESP_LOGCONFIG(TAG, "  Update Interval: %.3fs", this->get_update_interval() / 1000.0f);
+  
+  ret = esp_lcd_panel_init(this->lcd_panel_);
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to initialize RGB panel: %s", esp_err_to_name(ret));
+    this->mark_failed();
+    return;
+  }
+  
+  ESP_LOGD(TAG, "RGB LCD panel initialized successfully");
+}
+
+void VieweDisplay::draw_absolute_pixel_internal(int x, int y, Color color) {
+  if (x < 0 || x >= this->get_width_internal() || y < 0 || y >= this->get_height_internal()) {
+    return;
+  }
+  
+  // Convert to RGB565
+  uint16_t rgb565 = display::ColorUtil::color_to_565(color);
+  
+  // Calculate buffer position (RGB565 = 2 bytes per pixel)
+  size_t pos = (y * this->get_width_internal() + x) * 2;
+  
+  // Write to buffer (little endian)
+  this->buffer_[pos] = rgb565 & 0xFF;
+  this->buffer_[pos + 1] = (rgb565 >> 8) & 0xFF;
+}
+
+void VieweDisplay::update_display_() {
+  if (this->lcd_panel_ == nullptr || this->buffer_ == nullptr) {
+    return;
+  }
+  
+  // Draw the buffer to the LCD
+  esp_err_t ret = esp_lcd_panel_draw_bitmap(
+    this->lcd_panel_,
+    0, 0,  // Start position
+    this->get_width_internal(), this->get_height_internal(),  // End position
+    this->buffer_
+  );
+  
+  if (ret != ESP_OK) {
+    ESP_LOGE(TAG, "Failed to draw bitmap: %s", esp_err_to_name(ret));
+  }
+}
+
+void VieweDisplay::set_brightness(float brightness) {
+  this->brightness_ = clamp(brightness, 0.0f, 1.0f);
+  
+  if (this->brightness_ > 0) {
+    gpio_set_level(static_cast<gpio_num_t>(this->backlight_pin_), 1);
+    // Note: For PWM brightness control, you would need to implement PWM here
+    // For now, it's just on/off
+  } else {
+    gpio_set_level(static_cast<gpio_num_t>(this->backlight_pin_), 0);
+  }
 }
 
 }  // namespace viewe_display
 }  // namespace esphome
-
-#endif  // USE_ESP_IDF

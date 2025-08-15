@@ -1,0 +1,187 @@
+esphome:
+  name: viewe-7inch-display
+  friendly_name: VIEWE 7inch Display
+  platformio_options:
+    board_build.flash_mode: dio
+    board_build.mcu: esp32s3
+    board_build.f_cpu: 240000000L
+
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  framework:
+    type: esp-idf
+    version: 5.1.2
+    platform_version: 6.5.0
+    sdkconfig_options:
+      # PSRAM configuration
+      CONFIG_ESP32S3_SPIRAM_SUPPORT: y
+      CONFIG_SPIRAM: y
+      CONFIG_SPIRAM_MODE_OCT: y
+      CONFIG_SPIRAM_SPEED_80M: y
+      CONFIG_IDF_EXPERIMENTAL_FEATURES: y
+      CONFIG_SPIRAM_FETCH_INSTRUCTIONS: y
+      CONFIG_SPIRAM_RODATA: y
+      # LCD RGB panel configuration
+      CONFIG_ESP_LCD_RGB_ISR_IRAM_SAFE: y
+      CONFIG_ESP_LCD_RGB_RESTART_IN_VSYNC: y
+      # Memory configuration
+      CONFIG_SPIRAM_MALLOC_ALWAYSINTERNAL: "4096"
+      CONFIG_SPIRAM_MALLOC_RESERVE_INTERNAL: "32768"
+
+# External components - pointing to the custom component directory
+external_components:
+  - source:
+      type: local
+      path: ./viewe_display
+    components: [viewe_display]
+
+# Logger configuration
+logger:
+  level: DEBUG
+
+# Enable Home Assistant API
+api:
+  encryption:
+    key: "YOUR_ENCRYPTION_KEY_HERE"
+
+# OTA updates
+ota:
+  - platform: esphome
+    password: "YOUR_OTA_PASSWORD_HERE"
+
+# WiFi configuration
+wifi:
+  ssid: "YOUR_WIFI_SSID"
+  password: "YOUR_WIFI_PASSWORD"
+  
+  # Enable fallback hotspot in case wifi connection fails
+  ap:
+    ssid: "Viewe-Display Fallback"
+    password: "fallback123"
+
+# Web server for debugging
+web_server:
+  port: 80
+
+# I2C configuration for touch (GT911)
+i2c:
+  sda: GPIO19
+  scl: GPIO20
+  frequency: 400kHz
+  id: touch_i2c
+
+# Touch configuration using ESPHome's gt911 component
+touchscreen:
+  platform: gt911
+  id: my_touchscreen
+  i2c_id: touch_i2c
+  interrupt_pin: GPIO18
+  reset_pin: GPIO38
+  # Touch coordinates might need calibration
+  transform:
+    swap_xy: false
+    mirror_x: false
+    mirror_y: false
+
+# Display configuration using custom component
+display:
+  - platform: viewe_display
+    id: my_display
+    backlight_pin: GPIO2
+    brightness: 100%
+    update_interval: 16ms  # ~60 FPS
+    lambda: |-
+      // Example: Draw some test patterns
+      
+      // Clear screen with white
+      it.fill(Color(255, 255, 255));
+      
+      // Draw a red rectangle
+      it.rectangle(50, 50, 200, 100, Color(255, 0, 0));
+      
+      // Draw a filled blue circle
+      it.filled_circle(400, 240, 50, Color(0, 0, 255));
+      
+      // Draw some text (requires font configuration)
+      // it.print(400, 100, id(my_font), "VIEWE Display");
+      
+      // Draw a green line
+      it.line(100, 300, 700, 300, Color(0, 255, 0));
+      
+      // Example of using touch input
+      if (id(my_touchscreen).touched) {
+        auto touch_point = id(my_touchscreen).touches[0];
+        // Draw a circle at touch point
+        it.filled_circle(touch_point.x, touch_point.y, 20, Color(255, 0, 255));
+      }
+
+# Optional: Add fonts for text display
+# font:
+#   - file: "fonts/Arial.ttf"
+#     id: my_font
+#     size: 24
+
+# Optional: Add images
+# image:
+#   - file: "images/logo.png"
+#     id: my_logo
+#     type: RGB24
+
+# Optional: Add pages for multi-screen support
+# pages:
+#   - id: page1
+#     lambda: |-
+#       it.fill(Color(255, 255, 255));
+#       it.print(400, 240, id(my_font), TextAlign::CENTER, "Page 1");
+#   - id: page2
+#     lambda: |-
+#       it.fill(Color(200, 200, 200));
+#       it.print(400, 240, id(my_font), TextAlign::CENTER, "Page 2");
+
+# Button for testing (using BOOT button on GPIO0)
+binary_sensor:
+  - platform: gpio
+    pin:
+      number: GPIO0
+      inverted: true
+      mode:
+        input: true
+        pullup: true
+    name: "Boot Button"
+    on_press:
+      then:
+        - logger.log: "Boot button pressed"
+        # Optional: Switch display pages
+        # - display.page.next: my_display
+
+# Optional: Light component for backlight control
+light:
+  - platform: monochromatic
+    name: "Display Backlight"
+    output: backlight_output
+    default_transition_length: 250ms
+
+output:
+  - platform: ledc
+    pin: GPIO2
+    id: backlight_output
+    frequency: 1000Hz
+
+# Optional: Sensors for monitoring
+sensor:
+  - platform: uptime
+    name: "Uptime"
+  
+  - platform: wifi_signal
+    name: "WiFi Signal"
+    update_interval: 60s
+
+# Time component for displaying time
+time:
+  - platform: homeassistant
+    id: homeassistant_time
+    # Or use SNTP
+    # - platform: sntp
+    #   id: sntp_time
+    #   timezone: "America/New_York"

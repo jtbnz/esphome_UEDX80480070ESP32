@@ -16,6 +16,24 @@ This board uses the Display chip EK9716BD3+EK73002AB2
 
 ## Installation
 
+### Prerequisites
+
+Before using this component, you need to copy some required files to your ESPHome directory:
+
+1. **Required: Partition Table** (for 16MB flash)
+   ```bash
+   # Copy the partition table to your ESPHome directory
+   cp partitions_16MB.csv /config/esphome/
+   ```
+   This file defines the memory layout for the 16MB flash on the ESP32-S3.
+
+2. **Optional: Background Image** (for the example configuration)
+   ```bash
+   # Copy the background image if you want to use the example
+   cp starrynight.png /config/esphome/
+   ```
+   The example configuration references this image as a background. You can replace it with your own 800x480 image.
+
 ### Option 1: Use from GitHub (Recommended)
 
 Add this to your ESPHome configuration:
@@ -41,7 +59,16 @@ external_components:
    cp -r esphome_UEDX80480070ESP32/components/viewe_display /config/esphome/custom_components/
    ```
 
-3. Reference it locally in your YAML:
+3. Copy required files:
+   ```bash
+   # Required: partition table
+   cp esphome_UEDX80480070ESP32/partitions_16MB.csv /config/esphome/
+   
+   # Optional: example background image
+   cp esphome_UEDX80480070ESP32/starrynight.png /config/esphome/
+   ```
+
+4. Reference it locally in your YAML:
    ```yaml
    external_components:
      - source:
@@ -76,6 +103,15 @@ external_components:
 ## Basic Usage
 
 ```yaml
+# ESP32-S3 configuration with 16MB flash
+esp32:
+  board: esp32-s3-devkitc-1
+  variant: esp32s3
+  flash_size: 16MB
+  partitions: partitions_16MB.csv  # Make sure this file is in your ESPHome directory
+  framework:
+    type: esp-idf
+
 # Include the custom component from GitHub
 external_components:
   - source:
@@ -96,6 +132,8 @@ display:
       it.fill(Color(255, 255, 255));  // White background
       it.rectangle(50, 50, 200, 100, Color(255, 0, 0));  // Red rectangle
 ```
+
+See `example_config.yaml` for a complete configuration including LVGL, touch support, and background images.
 
 ## API Reference
 

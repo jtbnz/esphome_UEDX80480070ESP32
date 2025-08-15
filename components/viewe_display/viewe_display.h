@@ -15,7 +15,7 @@ static const uint16_t DISPLAY_WIDTH = 800;
 static const uint16_t DISPLAY_HEIGHT = 480;
 static const uint8_t BITS_PER_PIXEL = 16;  // RGB565
 
-class VieweDisplay : public display::DisplayBuffer, public Component {
+class VieweDisplay : public display::DisplayBuffer {
  public:
   void setup() override;
   void loop() override;

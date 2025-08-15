@@ -1,6 +1,6 @@
 # ESPHome Custom Component for VIEWE 7-inch Display
 
-This is a custom ESPHome component for the VIEWE UEDX80480070E-WB-A 7-inch 800x480 RGB display with ESP32-S3.
+This is a custom ESPHome component for the VIEWE UEDX80480070E-WB-A 7-inch 800x480 RGB display with ESP32-S3. I tried using  RPI_DPI_RGB configuration which worked except I coucouldnt get it to display more than 16 colours
 
 ## Features
 

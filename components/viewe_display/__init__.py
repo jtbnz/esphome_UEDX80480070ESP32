@@ -15,5 +15,5 @@ def validate_esp32_variant(config):
 
 viewe_display_ns = cg.esphome_ns.namespace("viewe_display")
 VieweDisplay = viewe_display_ns.class_(
-    "VieweDisplay", display.DisplayBuffer, cg.Component
+    "VieweDisplay", display.DisplayBuffer
 )

@@ -54,8 +54,11 @@ void VieweDisplay::update() {
 
 void VieweDisplay::dump_config() {
   ESP_LOGCONFIG(TAG, "VIEWE Display:");
-  ESP_LOGCONFIG(TAG, "  Width: %d", DISPLAY_WIDTH);
-  ESP_LOGCONFIG(TAG, "  Height: %d", DISPLAY_HEIGHT);
+  ESP_LOGCONFIG(TAG, "  Physical Width: %d", DISPLAY_WIDTH);
+  ESP_LOGCONFIG(TAG, "  Physical Height: %d", DISPLAY_HEIGHT);
+  ESP_LOGCONFIG(TAG, "  Logical Width: %d", this->get_width_internal());
+  ESP_LOGCONFIG(TAG, "  Logical Height: %d", this->get_height_internal());
+  ESP_LOGCONFIG(TAG, "  Rotation: %d°", this->rotation_ * 90);
   ESP_LOGCONFIG(TAG, "  Color Mode: RGB565");
   ESP_LOGCONFIG(TAG, "  Backlight Pin: %s", 
                 this->backlight_pin_ != GPIO_NUM_NC ? std::to_string(this->backlight_pin_).c_str() : "None");
@@ -143,11 +146,14 @@ void VieweDisplay::draw_absolute_pixel_internal(int x, int y, Color color) {
     return;
   }
   
+  // Apply rotation transformation
+  this->rotate_coordinates_(x, y);
+  
   // Convert to RGB565
   uint16_t rgb565 = display::ColorUtil::color_to_565(color);
   
-  // Calculate buffer position (RGB565 = 2 bytes per pixel)
-  size_t pos = (y * this->get_width_internal() + x) * 2;
+  // Calculate buffer position using physical dimensions (RGB565 = 2 bytes per pixel)
+  size_t pos = (y * this->get_physical_width_() + x) * 2;
   
   // Write to buffer (little endian)
   this->buffer_[pos] = rgb565 & 0xFF;
@@ -159,11 +165,11 @@ void VieweDisplay::update_display_() {
     return;
   }
   
-  // Draw the buffer to the LCD
+  // Always draw using physical dimensions to the LCD
   esp_err_t ret = esp_lcd_panel_draw_bitmap(
     this->lcd_panel_,
     0, 0,  // Start position
-    this->get_width_internal(), this->get_height_internal(),  // End position
+    this->get_physical_width_(), this->get_physical_height_(),  // End position
     this->buffer_
   );
   
@@ -184,6 +190,48 @@ void VieweDisplay::set_brightness(float brightness) {
     // TODO: Implement PWM brightness control for variable brightness
   } else {
     gpio_set_level(static_cast<gpio_num_t>(this->backlight_pin_), 0);
+  }
+}
+
+int VieweDisplay::get_width_internal() {
+  // Return logical width based on rotation
+  if (this->rotation_ == 1 || this->rotation_ == 3) {
+    return DISPLAY_HEIGHT;  // Swapped for 90° and 270°
+  }
+  return DISPLAY_WIDTH;
+}
+
+int VieweDisplay::get_height_internal() {
+  // Return logical height based on rotation
+  if (this->rotation_ == 1 || this->rotation_ == 3) {
+    return DISPLAY_WIDTH;  // Swapped for 90° and 270°
+  }
+  return DISPLAY_HEIGHT;
+}
+
+void VieweDisplay::rotate_coordinates_(int &x, int &y) {
+  int original_x = x;
+  int original_y = y;
+  
+  switch (this->rotation_) {
+    case 0:  // 0° - No rotation
+      // x and y remain unchanged
+      break;
+      
+    case 1:  // 90° clockwise
+      x = original_y;
+      y = this->get_physical_width_() - 1 - original_x;
+      break;
+      
+    case 2:  // 180°
+      x = this->get_physical_width_() - 1 - original_x;
+      y = this->get_physical_height_() - 1 - original_y;
+      break;
+      
+    case 3:  // 270° clockwise (90° counter-clockwise)
+      x = this->get_physical_height_() - 1 - original_y;
+      y = original_x;
+      break;
   }
 }
 

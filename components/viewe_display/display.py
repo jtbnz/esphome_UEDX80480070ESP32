@@ -7,11 +7,19 @@ from esphome.const import (
     CONF_ID,
     CONF_LAMBDA,
     CONF_PAGES,
+    CONF_ROTATION,
 )
 from esphome import pins
 from . import viewe_display_ns, VieweDisplay
 
 CONF_BACKLIGHT_PIN = "backlight_pin"
+
+ROTATIONS = {
+    0: 0,
+    90: 1,
+    180: 2,
+    270: 3,
+}
 
 CONFIG_SCHEMA = cv.All(
     display.FULL_DISPLAY_SCHEMA.extend(
@@ -20,6 +28,7 @@ CONFIG_SCHEMA = cv.All(
             cv.Optional(CONF_AUTO_CLEAR_ENABLED, default=True): cv.boolean,
             cv.Optional(CONF_BACKLIGHT_PIN): pins.gpio_output_pin_schema,
             cv.Optional(CONF_BRIGHTNESS, default=1.0): cv.percentage,
+            cv.Optional(CONF_ROTATION, default=0): cv.enum(ROTATIONS, int=True),
         }
     ).extend(cv.COMPONENT_SCHEMA),
     cv.has_at_most_one_key(CONF_LAMBDA, CONF_PAGES),
@@ -39,6 +48,9 @@ async def to_code(config):
     
     if CONF_BRIGHTNESS in config:
         cg.add(var.set_brightness(config[CONF_BRIGHTNESS]))
+    
+    if CONF_ROTATION in config:
+        cg.add(var.set_rotation(config[CONF_ROTATION]))
 
     if CONF_LAMBDA in config:
         lambda_ = await cg.process_lambda(

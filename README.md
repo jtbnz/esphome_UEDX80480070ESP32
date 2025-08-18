@@ -10,6 +10,7 @@ This board uses the Display chip EK9716BD3+EK73002AB2
 - Native RGB565 display driver for 800x480 resolution
 - Hardware-accelerated rendering using ESP32-S3 LCD peripheral
 - PSRAM framebuffer support for smooth graphics
+- Display rotation support (0°, 90°, 180°, 270°)
 - Backlight control
 - Compatible with ESPHome's display API for drawing shapes, text, and images
 - Touch support through ESPHome's existing GT911 component
@@ -126,6 +127,7 @@ display:
     id: my_display
     backlight_pin: GPIO2
     brightness: 100%
+    rotation: 0  # Options: 0 (default), 90, 180, 270
     update_interval: 16ms
     lambda: |-
       // Draw on the display
@@ -134,6 +136,16 @@ display:
 ```
 
 See `example_config.yaml` for a complete configuration including LVGL, touch support, and background images.
+
+### Configuration Options
+
+- **`id`** (*Required*): The ID to use for this display.
+- **`backlight_pin`** (*Optional*): GPIO pin connected to the backlight control (default: GPIO2).
+- **`brightness`** (*Optional*): Initial brightness level 0-100% (default: 100%).
+- **`rotation`** (*Optional*): Display rotation in degrees - 0, 90, 180, or 270 (default: 0).
+- **`auto_clear_enabled`** (*Optional*): Whether to clear display before each update (default: true).
+- **`update_interval`** (*Optional*): How often to update the display (default: 1s).
+- **`lambda`** (*Optional*): Lambda function for custom drawing.
 
 ## API Reference
 
@@ -223,12 +235,11 @@ output:
 
 - Pin configuration is hardcoded (matches VIEWE hardware)
 - RGB565 color format only
-- No rotation support in current version
 - Brightness control is on/off only (PWM can be added)
 
 ## Future Improvements
 
-- [ ] Add rotation support
+- [x] Display rotation support (0°, 90°, 180°, 270°)
 - [ ] PWM brightness control
 - [ ] Dynamic pin configuration
 - [ ] DMA optimization

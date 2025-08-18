@@ -25,14 +25,20 @@ class VieweDisplay : public display::DisplayBuffer {
   
   void set_backlight_pin(uint8_t pin) { this->backlight_pin_ = pin; }
   void set_brightness(float brightness);
+  void set_rotation(uint8_t rotation) { this->rotation_ = rotation; }
   
   display::DisplayType get_display_type() override { return display::DisplayType::DISPLAY_TYPE_COLOR; }
 
  protected:
   void draw_absolute_pixel_internal(int x, int y, Color color) override;
-  int get_height_internal() override { return DISPLAY_HEIGHT; }
-  int get_width_internal() override { return DISPLAY_WIDTH; }
+  int get_height_internal() override;
+  int get_width_internal() override;
   size_t get_buffer_length_() { return DISPLAY_WIDTH * DISPLAY_HEIGHT * (BITS_PER_PIXEL / 8); }
+  
+  // Rotation helper methods
+  void rotate_coordinates_(int &x, int &y);
+  uint16_t get_physical_width_() const { return DISPLAY_WIDTH; }
+  uint16_t get_physical_height_() const { return DISPLAY_HEIGHT; }
   
   void init_lcd_panel_();
   void update_display_();
@@ -40,6 +46,7 @@ class VieweDisplay : public display::DisplayBuffer {
   esp_lcd_panel_handle_t lcd_panel_ = nullptr;
   uint8_t backlight_pin_ = GPIO_NUM_NC;  // Default to no pin configured
   float brightness_ = 1.0f;
+  uint8_t rotation_ = 0;  // 0, 1, 2, 3 for 0°, 90°, 180°, 270°
   
   // Pin definitions matching the hardware
   static constexpr uint8_t LCD_GPIO_VSYNC = GPIO_NUM_41;

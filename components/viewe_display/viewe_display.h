@@ -25,7 +25,7 @@ class VieweDisplay : public display::DisplayBuffer {
   
   void set_backlight_pin(uint8_t pin) { this->backlight_pin_ = pin; }
   void set_brightness(float brightness);
-  void set_rotation(uint8_t rotation) { this->rotation_ = rotation; }
+  void set_rotation(uint8_t rotation) { this->rotation_ = rotation % 4; }  // Ensure valid range
   
   display::DisplayType get_display_type() override { return display::DisplayType::DISPLAY_TYPE_COLOR; }
 

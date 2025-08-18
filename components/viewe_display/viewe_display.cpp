@@ -149,11 +149,23 @@ void VieweDisplay::draw_absolute_pixel_internal(int x, int y, Color color) {
   // Apply rotation transformation
   this->rotate_coordinates_(x, y);
   
+  // Validate rotated coordinates are within physical bounds
+  if (x < 0 || x >= this->get_physical_width_() || y < 0 || y >= this->get_physical_height_()) {
+    ESP_LOGW(TAG, "Rotated coordinates out of bounds: x=%d, y=%d", x, y);
+    return;
+  }
+  
   // Convert to RGB565
   uint16_t rgb565 = display::ColorUtil::color_to_565(color);
   
   // Calculate buffer position using physical dimensions (RGB565 = 2 bytes per pixel)
+  // Add overflow protection
+  size_t max_pos = this->get_buffer_length_();
   size_t pos = (y * this->get_physical_width_() + x) * 2;
+  if (pos >= max_pos) {
+    ESP_LOGE(TAG, "Buffer position overflow: pos=%zu, max=%zu", pos, max_pos);
+    return;
+  }
   
   // Write to buffer (little endian)
   this->buffer_[pos] = rgb565 & 0xFF;

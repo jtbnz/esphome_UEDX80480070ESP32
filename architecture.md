@@ -39,7 +39,7 @@ graph TB
     
     subgraph "Physical Hardware"
         ESP[ESP32-S3-N16R8]
-        LCD[7" 800x480 Display]
+        LCD[7 inch 800x480 Display]
         TOUCH[GT911 Touch]
         BL[Backlight LED]
     end

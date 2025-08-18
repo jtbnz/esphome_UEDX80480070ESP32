@@ -6,6 +6,7 @@ secrets.yaml
 
 # Sensitive configuration files
 chair-display.yaml
+CLAUDE.md
 
 # Python cache and virtual environment
 __pycache__/

@@ -28,6 +28,7 @@ dist/
 
 # IDE and OS files
 .DS_Store
+**/.DS_Store
 .vscode/
 .idea/
 *.swp

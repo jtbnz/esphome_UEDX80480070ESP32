@@ -4,6 +4,9 @@ This is a custom ESPHome component for the VIEWE UEDX80480070E-WB-A 7-inch 800x4
 
 This board uses the Display chip EK9716BD3+EK73002AB2
 
+![Example Display Screenshot](example_screenshot.png)
+*Example configuration running on the VIEWE display showing LVGL interface with touch controls*
+
 
 ## Features
 
@@ -34,6 +37,9 @@ Before using this component, you need to copy some required files to your ESPHom
    cp starrynight.png /config/esphome/
    ```
    The example configuration references this image as a background. You can replace it with your own 800x480 image.
+
+3. **Optional: Example Screenshot**
+   The `example_screenshot.png` shows what the example configuration looks like when running on the actual hardware.
 
 ### Option 1: Use from GitHub (Recommended)
 
@@ -135,7 +141,22 @@ display:
       it.rectangle(50, 50, 200, 100, Color(255, 0, 0));  // Red rectangle
 ```
 
-See `example_config.yaml` for a complete configuration including LVGL, touch support, and background images.
+### Example Configuration
+
+The `example_config.yaml` file demonstrates a complete setup with:
+- **LVGL Integration**: Modern UI with buttons and labels
+- **Touch Support**: GT911 capacitive touch for interactive controls  
+- **Background Image**: Starry night background (800x480 PNG)
+- **Backlight Control**: Automatic dimming with touch activation
+- **Status LED**: WS2812B RGB LED for status indication
+- **WiFi & Home Assistant**: Full integration with Home Assistant
+
+The example creates an interface with three interactive buttons:
+- "Light ON" - Turns on the display backlight
+- "Light OFF" - Turns off the display backlight  
+- "Toggle LED" - Toggles the onboard RGB status LED
+
+See `example_config.yaml` for the complete implementation.
 
 ### Configuration Options
 

@@ -4,6 +4,17 @@
 
 This document describes the architecture and implementation of the ESPHome custom component for the VIEWE UEDX80480070E-WB-A 7-inch display with ESP32-S3. The component provides native RGB565 display driver support with hardware acceleration, PSRAM framebuffer management, and full integration with ESPHome's display API.
 
+## Table of Contents
+
+1. [System Architecture](#system-architecture)
+2. [Hardware Specifications](#hardware-specifications)
+3. [Component Structure](#component-structure)
+4. [Implementation Details](#implementation-details)
+5. [Security Features](#security-features)
+6. [Performance Optimizations](#performance-optimizations)
+7. [API Reference](#api-reference)
+8. [Development Timeline](#development-timeline)
+
 ## System Architecture
 
 ```mermaid

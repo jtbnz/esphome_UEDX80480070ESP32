@@ -35,3 +35,15 @@ dist/
 *.swp
 *.swo
 *~
+
+# PlatformIO
+.pio/
+.pioenvs/
+.piolibdeps/
+.clang_complete
+.gcc-flags.json
+
+# ESP-IDF
+sdkconfig
+sdkconfig.old
+sdkconfig.defaults.old

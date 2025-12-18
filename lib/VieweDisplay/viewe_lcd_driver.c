@@ -1,4 +1,4 @@
-#include "viewe_lcd_driver.h"
+#include "../../include/viewe_lcd_driver.h"
 #include <string.h>
 #include <stdlib.h>
 #include "esp_log.h"

@@ -1,4 +1,4 @@
-#include "flutter_bridge.h"
+#include "../../include/flutter_bridge.h"
 #include "esp_log.h"
 #include "driver/uart.h"
 #include <string.h>

@@ -1,4 +1,5 @@
 #!/bin/bash
+set -euo pipefail
 # Build validation script for VIEWE Display Standalone Driver
 
 echo "===================================="
